@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 
 @Entity
 @Table(name = "USER_DETAILS", schema = "public")
-public class UserDetails {
+public class UserDetail {
     @Id
     @NotBlank
     @Column(nullable = false, length = 255)
@@ -18,10 +18,10 @@ public class UserDetails {
     private String email;
 
 
-    public UserDetails() {
+    public UserDetail() {
     }
 
-    public UserDetails(String id, String email) {
+    public UserDetail(String id, String email) {
         this.id = id;
         this.email = email;
     }
@@ -36,5 +36,9 @@ public class UserDetails {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public void update(UserDetail userDetails) {
+        this.email = userDetails.getEmail();
     }
 }
