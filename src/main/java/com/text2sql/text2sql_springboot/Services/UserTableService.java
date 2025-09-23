@@ -25,6 +25,7 @@ public class UserTableService {
         this.userDatabaseRepository = userFileRepository;
     }
 
+    @Transactional
     public List<UserTableDto> findAllByDatabaseId(UUID databaseId) {
         UserDatabase db = userDatabaseRepository.findById(databaseId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND));
         var u = userTableRepository.findByUserDatabase(db);
@@ -44,21 +45,17 @@ public class UserTableService {
     }
 
     @Transactional
-    public UserTableDto update(UserTableRequest req, String user_id) {
+    public UserTableDto update(UserTableRequest req) {
         if (req.id().isEmpty()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "id is required");
         UserTable table = userTableRepository.findById(req.id().get()).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        if (!table.getUserDatabase().getUser().getId().equals(user_id))
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         table.setTableName(req.tablename());
         UserTable save = userTableRepository.save(table);
         return new UserTableDto(save.getId(), save.getTableName(), save.getUserDatabase().getId());
     }
 
     @Transactional
-    public void delete(UUID id, String user_id) {
+    public void delete(UUID id) {
         UserTable table = userTableRepository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        if (!table.getUserDatabase().getUser().getId().equals(user_id))
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         userTableRepository.delete(table);
     }
 

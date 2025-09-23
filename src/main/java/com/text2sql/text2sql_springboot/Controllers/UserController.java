@@ -5,7 +5,6 @@ import com.text2sql.text2sql_springboot.DTO.UserDto;
 import com.text2sql.text2sql_springboot.Services.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,9 +16,9 @@ public class UserController {
         this.service = userService;
     }
 
-    @GetMapping("/{id}")
-    public UserDto getUserById(@PathVariable String id) {
-        return service.findById(id);
+    @GetMapping
+    public UserDto getUserById() {
+        return service.findById();
     }
 
     @PostMapping
@@ -28,9 +27,9 @@ public class UserController {
         return service.create(req);
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping()
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable String id) {
-        service.deleteById(id);
+    public void delete() {
+        service.delete();
     }
 }

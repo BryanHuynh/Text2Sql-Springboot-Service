@@ -34,12 +34,12 @@ public class UserTableController {
     }
 
     @DeleteMapping("/{id}")
-    public void deleteUserTable(@PathVariable UUID id, @RequestHeader String user_id) {
-        userTableService.delete(id, user_id);
+    public void deleteUserTable(@PathVariable UUID id) {
+        userTableService.delete(id);
     }
 
     @PostMapping("/update")
-    public ResponseEntity<UserTableDto> updateUserTable(@RequestBody UserTableRequest req, @RequestHeader String user_id) {
-        return ResponseEntity.ok(userTableService.update(req, user_id));
+    public ResponseEntity<UserTableDto> updateUserTable(@RequestBody UserTableRequest req) {
+        return ResponseEntity.ok(userTableService.update(req));
     }
 }
