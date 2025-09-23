@@ -18,7 +18,6 @@ public class TableVariableController {
 
     public TableVariableController(TableVariableService tableVariableService) {
         this.tableVariableService = tableVariableService;
-
     }
 
     @GetMapping("/{tableId}")

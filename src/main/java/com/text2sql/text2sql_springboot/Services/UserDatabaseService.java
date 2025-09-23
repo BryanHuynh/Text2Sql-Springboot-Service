@@ -1,5 +1,9 @@
 package com.text2sql.text2sql_springboot.Services;
 
+import com.google.auth.oauth2.GoogleCredentials;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.FirebaseOptions;
+import com.google.firebase.auth.FirebaseAuth;
 import com.text2sql.text2sql_springboot.DTO.CreateUserDatabaseRequest;
 import com.text2sql.text2sql_springboot.DTO.UserDatabaseDto;
 import com.text2sql.text2sql_springboot.Entities.UserDetail;
@@ -7,10 +11,13 @@ import com.text2sql.text2sql_springboot.Entities.UserDatabase;
 import com.text2sql.text2sql_springboot.Repositories.UserDatabaseRepository;
 import com.text2sql.text2sql_springboot.Repositories.UserRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,8 +31,13 @@ public class UserDatabaseService {
         this.userRepository = userRepository;
     }
 
+    @Transactional
     public List<UserDatabaseDto> getAllUserDatabases(String user_id) {
-        return userDatabaseRepository.findByUserId(user_id).stream().map((file) -> new UserDatabaseDto(file.getDatabaseName(), file.getId())).toList();
+        return userDatabaseRepository.findByUserId(user_id)
+                .stream()
+                .map((file) ->
+                        new UserDatabaseDto(file.getDatabaseName(), file.getId())
+                ).toList();
     }
 
     @Transactional
@@ -52,6 +64,5 @@ public class UserDatabaseService {
         if (!file.getUser().getId().equals(user_id)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         userDatabaseRepository.delete(file);
     }
-
 
 }

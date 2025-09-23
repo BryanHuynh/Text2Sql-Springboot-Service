@@ -8,6 +8,7 @@ import com.text2sql.text2sql_springboot.Entities.UserTable;
 import com.text2sql.text2sql_springboot.Repositories.TableVariablesRepository;
 import com.text2sql.text2sql_springboot.Repositories.UserDatabaseRepository;
 import com.text2sql.text2sql_springboot.Repositories.UserTableRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -27,12 +28,14 @@ public class TableVariableService {
         this.userDatabaseRepository = userDatabaseRepository;
     }
 
+    @Transactional
     public List<TableVariableDto> getAllByTableId(UUID tableId) {
         UserTable table = userTableRepository.findById(tableId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Table not found"));
         List<TableVariable> variables = tableVariablesRepository.findAllByUserTable(table);
         return variables.stream().map(TableVariableDto::new).toList();
     }
 
+    @Transactional
     public List<TableVariableDto> getAllVariablesWithinDatabase(UUID databaseID) {
         UserDatabase database = userDatabaseRepository.findById(databaseID).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Database not found"));
         List<TableVariable> variables = tableVariablesRepository.findAll()
@@ -45,6 +48,7 @@ public class TableVariableService {
         return variables.stream().map(TableVariableDto::new).toList();
     }
 
+    @Transactional
     public TableVariableDto create(TableVariableRequest req) {
         UUID tableUUID = req.userTableId().orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "missing user table id"));
         UserTable userTable = userTableRepository.findById(tableUUID).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Table not found"));
@@ -62,6 +66,7 @@ public class TableVariableService {
         return new TableVariableDto(saved);
     }
 
+    @Transactional
     public TableVariableDto update(TableVariableRequest req) {
         if (req.id().isEmpty()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ID is required");
         TableVariable tableVariable = tableVariablesRepository.findById(req.id().get()).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Unable to find variable"));
@@ -77,6 +82,7 @@ public class TableVariableService {
         return new TableVariableDto(saved);
     }
 
+    @Transactional
     public void delete(UUID id) {
         tableVariablesRepository.deleteById(id);
     }
