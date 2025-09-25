@@ -7,9 +7,10 @@ public record TableVariableRequest(
         Optional<UUID> id,
         String variableName,
         String variableType,
-        boolean pkFlag,
-        boolean fkFlag,
+        boolean pk_flag,
+        boolean fk_flag,
         Optional<UUID> userTableId,
-        Optional<UUID> referenceVariable
+        Optional<UUID> referenceVariable,
+        Optional<Integer> order
 ) {
 }

@@ -10,4 +10,6 @@ import java.util.UUID;
 
 public interface TableVariablesRepository extends JpaRepository<TableVariable, UUID> {
     public List<TableVariable> findAllByUserTable(UserTable req);
+
+    int countByUserTable(UserTable userTable);
 }

@@ -20,14 +20,19 @@ public class TableVariableController {
         this.tableVariableService = tableVariableService;
     }
 
-    @GetMapping("/{tableId}")
-    public List<TableVariableDto> getAllVariablesForTable(@PathVariable UUID tableId) {
-        return tableVariableService.getAllByTableId(tableId);
+    @GetMapping("/{variableId}")
+    public ResponseEntity<TableVariableDto> getVariableById(@PathVariable UUID variableId) {
+        return ResponseEntity.ok(tableVariableService.getVariableById(variableId));
     }
 
-    @GetMapping("all/{database_id}")
-    public List<TableVariableDto> getAllVariables(@PathVariable UUID database_id) {
-        return tableVariableService.getAllVariablesWithinDatabase(database_id);
+    @GetMapping("/table/{tableId}")
+    public ResponseEntity<List<TableVariableDto>> getAllVariablesForTable(@PathVariable UUID tableId) {
+        return ResponseEntity.ok(tableVariableService.getAllByTableId(tableId));
+    }
+
+    @GetMapping("/database/{database_id}")
+    public ResponseEntity<List<TableVariableDto>> getAllVariables(@PathVariable UUID database_id) {
+        return ResponseEntity.ok(tableVariableService.getAllVariablesWithinDatabase(database_id));
     }
 
     @PostMapping
@@ -42,6 +47,7 @@ public class TableVariableController {
         var updated = tableVariableService.update(req);
         return ResponseEntity.ok(updated);
     }
+
 
     @DeleteMapping("/{variableId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

@@ -6,10 +6,12 @@ import com.text2sql.text2sql_springboot.Entities.UserDatabase;
 import com.text2sql.text2sql_springboot.Entities.UserDetail;
 import com.text2sql.text2sql_springboot.Repositories.UserDatabaseRepository;
 import com.text2sql.text2sql_springboot.Repositories.UserRepository;
+import com.text2sql.text2sql_springboot.security.AppContext;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
@@ -33,41 +35,47 @@ class UserDatabaseServiceTest {
 
     @Test
     void getAllUserDatabases_ShouldReturnDto_WhenPresent() {
-        String userId = "u-1";
+        try (MockedStatic<AppContext> mocked = mockStatic(AppContext.class)) {
+            String userId = "u-1";
 
-        UserDatabase db1 = mock(UserDatabase.class);
-        UUID uuid1 = UUID.randomUUID();
-        UUID uuid2 = UUID.randomUUID();
-        when(db1.getId()).thenReturn(uuid1);
-        when(db1.getDatabaseName()).thenReturn("DB One");
+            UserDatabase db1 = mock(UserDatabase.class);
+            UUID uuid1 = UUID.randomUUID();
+            UUID uuid2 = UUID.randomUUID();
+            when(db1.getId()).thenReturn(uuid1);
+            when(db1.getDatabaseName()).thenReturn("DB One");
 
-        UserDatabase db2 = mock(UserDatabase.class);
-        when(db2.getId()).thenReturn(uuid2);
-        when(db2.getDatabaseName()).thenReturn("DB Two");
+            UserDatabase db2 = mock(UserDatabase.class);
+            when(db2.getId()).thenReturn(uuid2);
+            when(db2.getDatabaseName()).thenReturn("DB Two");
 
-        when(userDatabaseRepository.findByUserId(userId)).thenReturn(List.of(db1, db2));
+            when(userDatabaseRepository.findByUserId(userId)).thenReturn(List.of(db1, db2));
+            mocked.when(AppContext::getCurrentUserId).thenReturn(userId);
+            List<UserDatabaseDto> result = userDatabaseService.getAllUserDatabases();
 
-        List<UserDatabaseDto> result = userDatabaseService.getAllUserDatabases(userId);
+            assertThat(result).hasSize(2);
+            assertThat(result.get(0).filename()).isEqualTo("DB One");
+            assertThat(result.get(0).id()).isEqualTo(uuid1);
+            assertThat(result.get(1).filename()).isEqualTo("DB Two");
+            assertThat(result.get(1).id()).isEqualTo(uuid2);
 
-        assertThat(result).hasSize(2);
-        assertThat(result.get(0).filename()).isEqualTo("DB One");
-        assertThat(result.get(0).id()).isEqualTo(uuid1);
-        assertThat(result.get(1).filename()).isEqualTo("DB Two");
-        assertThat(result.get(1).id()).isEqualTo(uuid2);
-
-        verify(userDatabaseRepository).findByUserId(userId);
+            verify(userDatabaseRepository).findByUserId(userId);
+        }
     }
 
     @Test
     void getAllUserDatabases_shouldReturnEmptyList_whenRepoReturnsEmpty() {
-        String userId = "u-2";
-        when(userDatabaseRepository.findByUserId(userId)).thenReturn(List.of());
+        try (MockedStatic<AppContext> mocked = mockStatic(AppContext.class)) {
+            String userId = "u-2";
+            when(userDatabaseRepository.findByUserId(userId)).thenReturn(List.of());
 
-        List<UserDatabaseDto> result = userDatabaseService.getAllUserDatabases(userId);
+            mocked.when(AppContext::getCurrentUserId).thenReturn(userId);
+            List<UserDatabaseDto> result = userDatabaseService.getAllUserDatabases();
 
-        assertThat(result).isEmpty();
-        verify(userDatabaseRepository).findByUserId(userId);
+            assertThat(result).isEmpty();
+            verify(userDatabaseRepository).findByUserId(userId);
+        }
     }
+
     @Test
     void create_shouldPersistAndReturnDto() {
         CreateUserDatabaseRequest req = mock(CreateUserDatabaseRequest.class);

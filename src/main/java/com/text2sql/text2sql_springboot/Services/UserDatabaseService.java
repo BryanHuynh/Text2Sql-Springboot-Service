@@ -10,6 +10,7 @@ import com.text2sql.text2sql_springboot.Entities.UserDetail;
 import com.text2sql.text2sql_springboot.Entities.UserDatabase;
 import com.text2sql.text2sql_springboot.Repositories.UserDatabaseRepository;
 import com.text2sql.text2sql_springboot.Repositories.UserRepository;
+import com.text2sql.text2sql_springboot.security.AppContext;
 import jakarta.transaction.Transactional;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -32,8 +33,8 @@ public class UserDatabaseService {
     }
 
     @Transactional
-    public List<UserDatabaseDto> getAllUserDatabases(String user_id) {
-        return userDatabaseRepository.findByUserId(user_id)
+    public List<UserDatabaseDto> getAllUserDatabases() {
+        return userDatabaseRepository.findByUserId(AppContext.getCurrentUserId())
                 .stream()
                 .map((file) ->
                         new UserDatabaseDto(file.getDatabaseName(), file.getId())
@@ -42,7 +43,7 @@ public class UserDatabaseService {
 
     @Transactional
     public UserDatabaseDto create(CreateUserDatabaseRequest createUserFileRequest) {
-        UserDetail user = userRepository.getReferenceById(createUserFileRequest.user_id());
+        UserDetail user = userRepository.getReferenceById(AppContext.getCurrentUserId());
         var saved = userDatabaseRepository.save(new UserDatabase(createUserFileRequest.filename(), user));
         return new UserDatabaseDto(saved.getDatabaseName(), saved.getId());
     }
@@ -51,7 +52,7 @@ public class UserDatabaseService {
     public UserDatabaseDto update(CreateUserDatabaseRequest req) throws ResponseStatusException {
         UUID databaseId = req.database_id().orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
         UserDatabase file = userDatabaseRepository.findById(databaseId).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
-        if (!file.getUser().getId().equals(req.user_id()))
+        if (!file.getUser().getId().equals(AppContext.getCurrentUserId()))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         file.setDatabaseName(req.filename());
         userDatabaseRepository.save(file);
@@ -59,9 +60,8 @@ public class UserDatabaseService {
     }
 
     @Transactional
-    public void delete(UUID id, String user_id) {
+    public void delete(UUID id) {
         UserDatabase file = userDatabaseRepository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        if (!file.getUser().getId().equals(user_id)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         userDatabaseRepository.delete(file);
     }
 

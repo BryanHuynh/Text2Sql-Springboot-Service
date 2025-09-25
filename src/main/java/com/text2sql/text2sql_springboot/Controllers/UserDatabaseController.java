@@ -21,9 +21,9 @@ public class UserDatabaseController {
         this.userDatabaseService = userFileService;
     }
 
-    @GetMapping("/{userId}")
-    public List<UserDatabaseDto> getAllUserDatabases(@PathVariable String userId) {
-        return userDatabaseService.getAllUserDatabases(userId);
+    @GetMapping()
+    public List<UserDatabaseDto> getAllUserDatabases() {
+        return userDatabaseService.getAllUserDatabases();
     }
 
     @PostMapping
@@ -41,7 +41,7 @@ public class UserDatabaseController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteUserFile(@PathVariable UUID id, @RequestHeader String user_id) {
-        userDatabaseService.delete(id, user_id);
+    public void deleteUserFile(@PathVariable UUID id) {
+        userDatabaseService.delete(id);
     }
 }

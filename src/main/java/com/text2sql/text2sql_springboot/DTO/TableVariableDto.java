@@ -13,8 +13,9 @@ public record TableVariableDto(
         String variableType,
         Boolean pk_flag,
         Boolean fk_flag,
-        UUID tableId,
-        Optional<UUID> referenceTable
+        UserTableDto userTable,
+        @Nullable TableVariableDto referenceTable,
+        int order
 ) {
     public TableVariableDto(TableVariable variable) {
         this(
@@ -23,9 +24,9 @@ public record TableVariableDto(
                 variable.getVariableType(),
                 variable.isPkFlag(),
                 variable.isFkFlag(),
-                variable.getUserTable().getId(),
-                Optional.ofNullable(variable.getFkRef())
-                        .map(TableVariable::getId)
+                variable.getUserTable() != null ? new UserTableDto(variable.getUserTable()) : null,
+                variable.getFkRef() != null ? new TableVariableDto(variable.getFkRef()) : null,
+                variable.getOrder()
         );
     }
 }
