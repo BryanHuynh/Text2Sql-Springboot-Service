@@ -26,8 +26,11 @@ public class TableVariable {
     @Column(name = "fk_flag")
     private boolean fkFlag;
 
+    @Column(name = "variable_order")
+    private int order;
+
     @ManyToOne
-    @JoinColumn(name = "fk_table_variable", foreignKey = @ForeignKey(name = "fk_ref_id"))
+    @JoinColumn(name = "fk_ref_id", foreignKey = @ForeignKey(name = "fk_table_variable"))
     private TableVariable fkRef;
 
     @ManyToOne
@@ -41,6 +44,7 @@ public class TableVariable {
         this.fkFlag = builder.fkFlag;
         this.fkRef = builder.fkRef;
         this.userTable = builder.userTable;
+        this.order = builder.order;
     }
 
     public TableVariable() {
@@ -64,6 +68,7 @@ public class TableVariable {
         private boolean fkFlag;
         private TableVariable fkRef;
         private UserTable userTable;
+        private int order;
 
         public Builder variableName(String variableName) {
             this.variableName = variableName;
@@ -95,6 +100,11 @@ public class TableVariable {
             return this;
         }
 
+        public Builder order(int order) {
+            this.order = order;
+            return this;
+        }
+
         public TableVariable build() {
             return new TableVariable(this);
         }
@@ -110,6 +120,10 @@ public class TableVariable {
 
     public String getVariableType() {
         return variableType;
+    }
+
+    public int getOrder() {
+        return order;
     }
 
     public boolean isPkFlag() {
@@ -143,6 +157,10 @@ public class TableVariable {
 
     public void setFkFlag(boolean fkFlag) {
         this.fkFlag = fkFlag;
+    }
+
+    public void setOrder(int order) {
+        this.order = order;
     }
 
 }

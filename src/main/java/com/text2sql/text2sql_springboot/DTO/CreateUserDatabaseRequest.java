@@ -11,10 +11,6 @@ public record CreateUserDatabaseRequest(
         String filename,
 
         @Id
-        @NotBlank
-        String user_id,
-
-        @Id
         Optional<UUID> database_id
 ) {
 }

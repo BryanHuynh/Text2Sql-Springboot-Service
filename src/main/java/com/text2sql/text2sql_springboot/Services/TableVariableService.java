@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -52,12 +53,14 @@ public class TableVariableService {
     public TableVariableDto create(TableVariableRequest req) {
         UUID tableUUID = req.userTableId().orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "missing user table id"));
         UserTable userTable = userTableRepository.findById(tableUUID).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Table not found"));
+        int count = tableVariablesRepository.countByUserTable(userTable);
         TableVariable.Builder builder = new TableVariable.Builder()
                 .variableName(req.variableName())
                 .variableType(req.variableType())
-                .pkFlag(req.pkFlag())
-                .fkFlag(req.fkFlag())
-                .userTable(userTable);
+                .pkFlag(req.pk_flag())
+                .fkFlag(req.fk_flag())
+                .userTable(userTable)
+                .order(count);
         if (req.referenceVariable().isPresent()) {
             TableVariable ref = tableVariablesRepository.findById(req.referenceVariable().get()).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Reference Variable not Found"));
             builder.fkRef(ref);
@@ -68,12 +71,16 @@ public class TableVariableService {
 
     @Transactional
     public TableVariableDto update(TableVariableRequest req) {
-        if (req.id().isEmpty()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ID is required");
+        if (req.id().isEmpty())
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ID is required");
         TableVariable tableVariable = tableVariablesRepository.findById(req.id().get()).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Unable to find variable"));
         tableVariable.setVariableName(req.variableName());
         tableVariable.setVariableType(req.variableType());
-        tableVariable.setPkFlag(req.pkFlag());
-        tableVariable.setFkFlag(req.fkFlag());
+        tableVariable.setPkFlag(req.pk_flag());
+        tableVariable.setFkFlag(req.fk_flag());
+        if (req.order().isPresent()) {
+            tableVariable.setOrder(req.order().get());
+        }
         if (req.referenceVariable().isPresent()) {
             TableVariable ref = tableVariablesRepository.findById(req.referenceVariable().get()).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Reference Variable not Found"));
             tableVariable.setFkRef(ref);
@@ -85,5 +92,10 @@ public class TableVariableService {
     @Transactional
     public void delete(UUID id) {
         tableVariablesRepository.deleteById(id);
+    }
+
+    public TableVariableDto getVariableById(UUID variableId) {
+        TableVariable variable = tableVariablesRepository.findById(variableId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Variable not found"));
+        return new TableVariableDto(variable);
     }
 }
