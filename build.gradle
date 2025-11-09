@@ -19,6 +19,7 @@ repositories {
 }
 
 dependencies {
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.19.2'
     implementation 'org.springframework.boot:spring-boot-starter-aop'
     implementation 'com.google.firebase:firebase-admin:9.6.0'
     testImplementation 'com.google.firebase:firebase-admin:9.6.0'
@@ -32,6 +33,7 @@ dependencies {
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     runtimeOnly 'org.postgresql:postgresql'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    runtimeOnly 'com.h2database:h2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 

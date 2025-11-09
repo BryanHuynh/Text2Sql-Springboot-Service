@@ -31,7 +31,7 @@ public class TableVariableController {
     }
 
     @GetMapping("/database/{database_id}")
-    public ResponseEntity<List<TableVariableDto>> getAllVariables(@PathVariable UUID database_id) {
+    public ResponseEntity<List<TableVariableDto>> getAllVariablesByDatabase(@PathVariable UUID database_id) {
         return ResponseEntity.ok(tableVariableService.getAllVariablesWithinDatabase(database_id));
     }
 

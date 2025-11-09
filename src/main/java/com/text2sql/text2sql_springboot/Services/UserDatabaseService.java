@@ -27,8 +27,8 @@ public class UserDatabaseService {
     private final UserDatabaseRepository userDatabaseRepository;
     private final UserRepository userRepository;
 
-    public UserDatabaseService(UserDatabaseRepository userFileRepository, UserRepository userRepository) {
-        this.userDatabaseRepository = userFileRepository;
+    public UserDatabaseService(UserDatabaseRepository userDatabaseRepository, UserRepository userRepository) {
+        this.userDatabaseRepository = userDatabaseRepository;
         this.userRepository = userRepository;
     }
 

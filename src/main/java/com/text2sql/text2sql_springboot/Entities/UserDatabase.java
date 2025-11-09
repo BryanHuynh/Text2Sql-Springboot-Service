@@ -1,6 +1,7 @@
 package com.text2sql.text2sql_springboot.Entities;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.UuidGenerator;
 
 import java.util.UUID;
 
@@ -8,7 +9,9 @@ import java.util.UUID;
 @Table(name = "USER_DATABASES", schema = "public")
 public class UserDatabase {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY) // SERIAL
+    @GeneratedValue
+    @UuidGenerator
+    @Column(columnDefinition = "uuid")
     private UUID id;
 
     @Column(name = "database_name", nullable = false, length = 100)
