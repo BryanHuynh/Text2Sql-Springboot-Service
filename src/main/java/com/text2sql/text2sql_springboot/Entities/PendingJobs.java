@@ -71,4 +71,8 @@ public class PendingJobs {
         this.setUserDetail(userDetail);
         this.setJobStatus(jobStatus);
     }
+
+    public PendingJobs() {
+
+    }
 }
