@@ -13,12 +13,9 @@ import java.util.UUID;
 
 @Service
 public class MLHttpConstructionService {
-    private final SchemaModelConstructionService schemaModelConstructionService;
     private final QueryServiceCallbackUrlFactory callbackUrlFactory;
 
-    public MLHttpConstructionService(SchemaModelConstructionService schemaModelConstructionService,
-                                     QueryServiceCallbackUrlFactory callbackUrlFactory) {
-        this.schemaModelConstructionService = schemaModelConstructionService;
+    public MLHttpConstructionService(QueryServiceCallbackUrlFactory callbackUrlFactory) {
         this.callbackUrlFactory = callbackUrlFactory;
     }
 

@@ -8,12 +8,14 @@ public class QuerySchemaRequest {
     private String question;
     private String dbId;
     private String callbackUrl;
+    private String id;
 
     public QuerySchemaRequest(Builder builder) {
         this.schema = builder.getSchema();
         this.question = builder.getQuestion();
         this.dbId = builder.getDbId();
         this.callbackUrl = builder.getCallbackUrl();
+        this.id = builder.id.toString();
     }
 
     public Map<String, Object> getSchema() {
@@ -48,12 +50,21 @@ public class QuerySchemaRequest {
         this.callbackUrl = callbackUrl;
     }
 
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+
     public static class Builder {
         private Map<String, Object> schema;
         private String question;
         private String dbId;
         private String callbackUrl;
-        private UUID correlationId;
+        private UUID id;
 
         public Builder() {
         }
@@ -78,8 +89,8 @@ public class QuerySchemaRequest {
             return this;
         }
 
-        public Builder correlationId(UUID correlationId) {
-            this.correlationId = correlationId;
+        public Builder id(UUID correlationId) {
+            this.id = correlationId;
             return this;
         }
 
@@ -103,8 +114,8 @@ public class QuerySchemaRequest {
             return callbackUrl;
         }
 
-        public UUID getCorrelationId() {
-            return correlationId;
+        public UUID getId() {
+            return id;
         }
     }
 }

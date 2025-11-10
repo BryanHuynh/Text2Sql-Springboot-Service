@@ -1,19 +1,15 @@
 package com.text2sql.text2sql_springboot.Services;
 
 import com.text2sql.text2sql_springboot.Config.MLServiceProps;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 
 @Service
-public class SignatureService {
-    private final MLServiceProps props;
-
-    public SignatureService(MLServiceProps props) {
-        this.props = props;
-    }
+public record SignatureService(MLServiceProps props) {
 
     public String generateSignature(String payload) {
         try {
