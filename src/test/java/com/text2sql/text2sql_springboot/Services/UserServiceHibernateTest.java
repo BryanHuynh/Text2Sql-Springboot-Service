@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
@@ -16,12 +15,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mockStatic;
 
 @DataJpaTest
-class UserServiceTestHibernate {
+class UserServiceHibernateTest {
 
     @Autowired
     private UserRepository repo;
 
-    @Autowired
     private UserService userService;
 
     @Test
