@@ -1,7 +1,6 @@
 package com.text2sql.text2sql_springboot.Services;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.text2sql.text2sql_springboot.DTO.QueryRequest;
 import com.text2sql.text2sql_springboot.DTO.QuerySchemaRequest;
 import com.text2sql.text2sql_springboot.DTO.SchemaModel;
@@ -19,16 +18,16 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class MLHttpConstructionServiceTest {
+class QuerySchemaConstructionServiceTest {
 
     @Mock
     private QueryServiceCallbackUrlFactory callbackUrlFactory;
 
-    private MLHttpConstructionService mlHttpConstructionService;
+    private QueryConstructionService querySchemaConstructionService;
 
     @BeforeEach
     void setUp() {
-        mlHttpConstructionService = new MLHttpConstructionService(callbackUrlFactory);
+        querySchemaConstructionService = new QueryConstructionService(callbackUrlFactory);
         // Mock the callback URL factory to return predictable URLs
         when(callbackUrlFactory.buildJobCallbackUrl(anyString()))
                 .thenAnswer(invocation -> "http://localhost:8080/query/jobs/" + invocation.getArgument(0) + "/callback");
@@ -50,7 +49,7 @@ class MLHttpConstructionServiceTest {
         SchemaModel schemaModel = schemaBuilder.build();
 
         // When
-        QuerySchemaRequest result = mlHttpConstructionService.constructHttpRequest(queryRequest, schemaModel);
+        QuerySchemaRequest result = querySchemaConstructionService.constructHttpRequest(queryRequest, schemaModel);
 
         // Then
         assertNotNull(result);
@@ -83,8 +82,8 @@ class MLHttpConstructionServiceTest {
         SchemaModel schemaModel = schemaBuilder.build();
 
         // When
-        QuerySchemaRequest result1 = mlHttpConstructionService.constructHttpRequest(queryRequest, schemaModel);
-        QuerySchemaRequest result2 = mlHttpConstructionService.constructHttpRequest(queryRequest, schemaModel);
+        QuerySchemaRequest result1 = querySchemaConstructionService.constructHttpRequest(queryRequest, schemaModel);
+        QuerySchemaRequest result2 = querySchemaConstructionService.constructHttpRequest(queryRequest, schemaModel);
 
         // Then
         UUID id1 = result1.getId();
@@ -111,7 +110,7 @@ class MLHttpConstructionServiceTest {
         SchemaModel schemaModel = schemaBuilder.build();
 
         // When
-        QuerySchemaRequest result = mlHttpConstructionService.constructHttpRequest(queryRequest, schemaModel);
+        QuerySchemaRequest result = querySchemaConstructionService.constructHttpRequest(queryRequest, schemaModel);
 
         // Then
         assertNotNull(result);
@@ -133,7 +132,7 @@ class MLHttpConstructionServiceTest {
         SchemaModel schemaModel = schemaBuilder.build();
 
         // When
-        QuerySchemaRequest result = mlHttpConstructionService.constructHttpRequest(queryRequest, schemaModel);
+        QuerySchemaRequest result = querySchemaConstructionService.constructHttpRequest(queryRequest, schemaModel);
 
         // Then
         UUID correlationId = result.getId();
