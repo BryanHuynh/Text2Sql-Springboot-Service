@@ -19,18 +19,17 @@ public class MLHttpConstructionService {
         this.callbackUrlFactory = callbackUrlFactory;
     }
 
-    public String constructHttpRequest(QueryRequest req, SchemaModel schemaModel) throws JsonProcessingException {
+    public QuerySchemaRequest constructHttpRequest(QueryRequest req, SchemaModel schemaModel) throws JsonProcessingException {
         UUID correlationId = UUID.randomUUID();
         QuerySchemaRequest.Builder builder = new QuerySchemaRequest.Builder();
         Map<String, Object> schema = schemaModel.toSchemaMap();
-        QuerySchemaRequest query = builder.schema(schema)
+        return builder
+                .schema(schema)
                 .question(req.getQuestion())
                 .dbId((String) schema.get("db_id"))
                 .callbackUrl(callbackUrlFactory.buildJobCallbackUrl(correlationId.toString()))
                 .id(correlationId)
                 .build();
 
-        ObjectMapper mapper = new ObjectMapper();
-        return mapper.writeValueAsString(query);
     }
 }

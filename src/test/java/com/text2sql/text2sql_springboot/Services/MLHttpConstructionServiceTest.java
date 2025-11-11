@@ -3,6 +3,7 @@ package com.text2sql.text2sql_springboot.Services;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.text2sql.text2sql_springboot.DTO.QueryRequest;
+import com.text2sql.text2sql_springboot.DTO.QuerySchemaRequest;
 import com.text2sql.text2sql_springboot.DTO.SchemaModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -24,13 +25,10 @@ class MLHttpConstructionServiceTest {
     private QueryServiceCallbackUrlFactory callbackUrlFactory;
 
     private MLHttpConstructionService mlHttpConstructionService;
-    private ObjectMapper objectMapper;
 
     @BeforeEach
     void setUp() {
         mlHttpConstructionService = new MLHttpConstructionService(callbackUrlFactory);
-        objectMapper = new ObjectMapper();
-
         // Mock the callback URL factory to return predictable URLs
         when(callbackUrlFactory.buildJobCallbackUrl(anyString()))
                 .thenAnswer(invocation -> "http://localhost:8080/query/jobs/" + invocation.getArgument(0) + "/callback");
@@ -52,28 +50,22 @@ class MLHttpConstructionServiceTest {
         SchemaModel schemaModel = schemaBuilder.build();
 
         // When
-        String result = mlHttpConstructionService.constructHttpRequest(queryRequest, schemaModel);
+        QuerySchemaRequest result = mlHttpConstructionService.constructHttpRequest(queryRequest, schemaModel);
 
         // Then
         assertNotNull(result);
-        assertFalse(result.isEmpty());
 
-        // Parse the JSON to verify structure
-        @SuppressWarnings("unchecked")
-        Map<String, Object> jsonMap = objectMapper.readValue(result, Map.class);
-
-        assertEquals("What is the total revenue?", jsonMap.get("question"));
-        assertEquals("sales_db", jsonMap.get("dbId"));
-        assertNotNull(jsonMap.get("callbackUrl"));
-        assertNotNull(jsonMap.get("id"));
-        assertNotNull(jsonMap.get("schema"));
+        assertEquals("What is the total revenue?", result.getQuestion());
+        assertEquals("sales_db", result.getDbId());
+        assertNotNull(result.getCallbackUrl());
+        assertNotNull(result.getId());
+        assertNotNull(result.getSchema());
 
         // Verify callback URL format
-        String callbackUrl = (String) jsonMap.get("callbackUrl");
+        String callbackUrl = result.getCallbackUrl();
         assertTrue(callbackUrl.contains("/query/jobs/"));
         assertTrue(callbackUrl.endsWith("/callback"));
     }
-
 
 
     @Test
@@ -91,17 +83,12 @@ class MLHttpConstructionServiceTest {
         SchemaModel schemaModel = schemaBuilder.build();
 
         // When
-        String result1 = mlHttpConstructionService.constructHttpRequest(queryRequest, schemaModel);
-        String result2 = mlHttpConstructionService.constructHttpRequest(queryRequest, schemaModel);
+        QuerySchemaRequest result1 = mlHttpConstructionService.constructHttpRequest(queryRequest, schemaModel);
+        QuerySchemaRequest result2 = mlHttpConstructionService.constructHttpRequest(queryRequest, schemaModel);
 
         // Then
-        @SuppressWarnings("unchecked")
-        Map<String, Object> json1 = objectMapper.readValue(result1, Map.class);
-        @SuppressWarnings("unchecked")
-        Map<String, Object> json2 = objectMapper.readValue(result2, Map.class);
-
-        String id1 = (String) json1.get("id");
-        String id2 = (String) json2.get("id");
+        String id1 = result1.getId();
+        String id2 = result2.getId();
 
         assertNotNull(id1);
         assertNotNull(id2);
@@ -128,15 +115,12 @@ class MLHttpConstructionServiceTest {
         SchemaModel schemaModel = schemaBuilder.build();
 
         // When
-        String result = mlHttpConstructionService.constructHttpRequest(queryRequest, schemaModel);
+        QuerySchemaRequest result = mlHttpConstructionService.constructHttpRequest(queryRequest, schemaModel);
 
         // Then
         assertNotNull(result);
 
-        @SuppressWarnings("unchecked")
-        Map<String, Object> jsonMap = objectMapper.readValue(result, Map.class);
-
-        assertEquals(questionWithSpecialChars, jsonMap.get("question"));
+        assertEquals(questionWithSpecialChars, result.getQuestion());
     }
 
     @Test
@@ -153,14 +137,11 @@ class MLHttpConstructionServiceTest {
         SchemaModel schemaModel = schemaBuilder.build();
 
         // When
-        String result = mlHttpConstructionService.constructHttpRequest(queryRequest, schemaModel);
+        QuerySchemaRequest result = mlHttpConstructionService.constructHttpRequest(queryRequest, schemaModel);
 
         // Then
-        @SuppressWarnings("unchecked")
-        Map<String, Object> jsonMap = objectMapper.readValue(result, Map.class);
-
-        String correlationId = (String) jsonMap.get("id");
-        String callbackUrl = (String) jsonMap.get("callbackUrl");
+        String correlationId = result.getId();
+        String callbackUrl = result.getCallbackUrl();
 
         assertNotNull(correlationId);
         assertNotNull(callbackUrl);
@@ -168,65 +149,4 @@ class MLHttpConstructionServiceTest {
                 "Callback URL should contain the correlation ID");
     }
 
-    @Test
-    @DisplayName("Should produce valid JSON that can be parsed back")
-    void testConstructHttpRequest_ProducesValidJson() throws JsonProcessingException {
-        // Given
-        UUID databaseId = UUID.randomUUID();
-        QueryRequest queryRequest = new QueryRequest("Test query", databaseId);
-
-        SchemaModel.Builder schemaBuilder = new SchemaModel.Builder();
-        schemaBuilder.setDbId("test_db");
-        schemaBuilder.addTable("test_table");
-        schemaBuilder.addColumn("test_table", "col1", "text");
-        schemaBuilder.addColumn("test_table", "col2", "integer");
-        SchemaModel schemaModel = schemaBuilder.build();
-
-        // When
-        String result = mlHttpConstructionService.constructHttpRequest(queryRequest, schemaModel);
-
-        // Then - should not throw any exception when parsing
-        assertDoesNotThrow(() -> {
-            objectMapper.readValue(result, Map.class);
-        });
-
-        // Verify it's properly formatted JSON
-        assertTrue(result.startsWith("{"));
-        assertTrue(result.endsWith("}"));
-    }
-
-    @Test
-    @DisplayName("Should include all required fields in JSON output")
-    void testConstructHttpRequest_ContainsAllRequiredFields() throws JsonProcessingException {
-        // Given
-        UUID databaseId = UUID.randomUUID();
-        QueryRequest queryRequest = new QueryRequest("Get data", databaseId);
-
-        SchemaModel.Builder schemaBuilder = new SchemaModel.Builder();
-        schemaBuilder.setDbId("required_fields_db");
-        schemaBuilder.addTable("table1");
-        schemaBuilder.addColumn("table1", "id", "integer");
-        SchemaModel schemaModel = schemaBuilder.build();
-
-        // When
-        String result = mlHttpConstructionService.constructHttpRequest(queryRequest, schemaModel);
-
-        // Then
-        @SuppressWarnings("unchecked")
-        Map<String, Object> jsonMap = objectMapper.readValue(result, Map.class);
-
-        // Verify all required fields are present
-        assertTrue(jsonMap.containsKey("schema"), "JSON should contain 'schema' field");
-        assertTrue(jsonMap.containsKey("question"), "JSON should contain 'question' field");
-        assertTrue(jsonMap.containsKey("dbId"), "JSON should contain 'dbId' field");
-        assertTrue(jsonMap.containsKey("callbackUrl"), "JSON should contain 'callbackUrl' field");
-        assertTrue(jsonMap.containsKey("id"), "JSON should contain 'id' field");
-
-        // Verify no null values for required fields
-        assertNotNull(jsonMap.get("schema"));
-        assertNotNull(jsonMap.get("question"));
-        assertNotNull(jsonMap.get("dbId"));
-        assertNotNull(jsonMap.get("callbackUrl"));
-        assertNotNull(jsonMap.get("id"));
-    }
 }

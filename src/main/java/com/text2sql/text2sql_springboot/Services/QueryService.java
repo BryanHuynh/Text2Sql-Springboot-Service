@@ -22,23 +22,36 @@ public class QueryService {
     private final PendingJobsRepository pendingJobsRepository;
     private final MLServiceProps mlServiceProps;
     private final SignatureService signatureService;
+    private final SchemaModelConstructionService smConstructionService;
+    private final MLHttpConstructionService httpConstructionService;
 
     public QueryService(
             PendingJobsRepository pendingJobsRepository,
             MLServiceProps mlServiceProps,
-            SignatureService signatureService
+            SignatureService signatureService,
+            SchemaModelConstructionService schemaModelConstructionService,
+            MLHttpConstructionService mlHttpConstructionService
     ) {
         this.pendingJobsRepository = pendingJobsRepository;
         this.mlServiceProps = mlServiceProps;
         this.signatureService = signatureService;
+        this.smConstructionService = schemaModelConstructionService;
+        this.httpConstructionService = mlHttpConstructionService;
     }
 
 
-    public void query(String request) {
+    public void query(QueryRequest request) throws JsonProcessingException {
+        SchemaModel schema = smConstructionService.constructSchema(request.getDatabase_id());
+        QuerySchemaRequest payloadRequest = httpConstructionService.constructHttpRequest(request, schema);
+
+        ObjectMapper mapper = new ObjectMapper();
+        String payload = mapper.writeValueAsString(payloadRequest);
+
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("X-Webhook-Signature", signatureService.generateSignature(request));
-        HttpEntity<String> httpRequest = new HttpEntity<>(request, headers);
+        headers.set("X-Webhook-Signature", signatureService.generateSignature(payload));
+
+        HttpEntity<String> httpRequest = new HttpEntity<>(payload, headers);
         RestTemplate restTemplate = new RestTemplate();
 
         ResponseEntity<MLQueueStatusResponses> response = restTemplate.postForEntity(
