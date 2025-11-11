@@ -8,14 +8,14 @@ public class QuerySchemaRequest {
     private String question;
     private String dbId;
     private String callbackUrl;
-    private String id;
+    private UUID id;
 
     public QuerySchemaRequest(Builder builder) {
         this.schema = builder.getSchema();
         this.question = builder.getQuestion();
         this.dbId = builder.getDbId();
         this.callbackUrl = builder.getCallbackUrl();
-        this.id = builder.id.toString();
+        this.id = builder.id;
     }
 
     public Map<String, Object> getSchema() {
@@ -50,11 +50,11 @@ public class QuerySchemaRequest {
         this.callbackUrl = callbackUrl;
     }
 
-    public String getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 

@@ -24,24 +24,31 @@ public class QueryService {
     private final SignatureService signatureService;
     private final SchemaModelConstructionService smConstructionService;
     private final MLHttpConstructionService httpConstructionService;
+    private final UserDatabaseRepository userDatabaseRepository;
 
     public QueryService(
             PendingJobsRepository pendingJobsRepository,
             MLServiceProps mlServiceProps,
             SignatureService signatureService,
             SchemaModelConstructionService schemaModelConstructionService,
-            MLHttpConstructionService mlHttpConstructionService
+            MLHttpConstructionService mlHttpConstructionService,
+            UserDatabaseRepository userDatabaseRepository
     ) {
         this.pendingJobsRepository = pendingJobsRepository;
         this.mlServiceProps = mlServiceProps;
         this.signatureService = signatureService;
         this.smConstructionService = schemaModelConstructionService;
         this.httpConstructionService = mlHttpConstructionService;
+        this.userDatabaseRepository = userDatabaseRepository;
     }
 
 
-    public void query(QueryRequest request) throws JsonProcessingException {
-        SchemaModel schema = smConstructionService.constructSchema(request.getDatabase_id());
+    public void query(QueryRequest request) throws JsonProcessingException, ResponseStatusException {
+        Optional<UserDatabase> db = userDatabaseRepository.findById(request.getDatabase_id());
+        if (db.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Database not found");
+        }
+        SchemaModel schema = smConstructionService.constructSchema(db.get());
         QuerySchemaRequest payloadRequest = httpConstructionService.constructHttpRequest(request, schema);
 
         ObjectMapper mapper = new ObjectMapper();
@@ -54,14 +61,27 @@ public class QueryService {
         HttpEntity<String> httpRequest = new HttpEntity<>(payload, headers);
         RestTemplate restTemplate = new RestTemplate();
 
-        ResponseEntity<MLQueueStatusResponses> response = restTemplate.postForEntity(
+        ResponseEntity<MLQueueResponse> response = restTemplate.postForEntity(
                 UriComponentsBuilder.fromUriString(mlServiceProps.getUrl())
                         .path("queue")
                         .build()
                         .toUriString(),
                 httpRequest,
-                MLQueueStatusResponses.class
+                MLQueueResponse.class
         );
+        if (response.getStatusCode().is2xxSuccessful()
+                && response.getBody() != null
+                && response.getBody().ok()
+                && response.getBody().status().equals(MLQueueStatusResponses.queued)) {
+            pendingJobsRepository.save(
+                    new PendingJobs(
+                            payloadRequest.getId(),
+                            db.get().getUser(),
+                            PendingJobs.JobStatus.STARTED)
+            );
+        } else {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     public ResponseEntity<MLPingDto> ping() {

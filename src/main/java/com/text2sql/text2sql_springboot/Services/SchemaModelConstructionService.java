@@ -5,7 +5,6 @@ import com.text2sql.text2sql_springboot.Entities.TableVariable;
 import com.text2sql.text2sql_springboot.Entities.UserDatabase;
 import com.text2sql.text2sql_springboot.Entities.UserTable;
 import com.text2sql.text2sql_springboot.Repositories.TableVariablesRepository;
-import com.text2sql.text2sql_springboot.Repositories.UserDatabaseRepository;
 import com.text2sql.text2sql_springboot.Repositories.UserTableRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -13,8 +12,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 
 @Service
 public class SchemaModelConstructionService {

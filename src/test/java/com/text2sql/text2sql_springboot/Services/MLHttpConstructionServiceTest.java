@@ -87,16 +87,12 @@ class MLHttpConstructionServiceTest {
         QuerySchemaRequest result2 = mlHttpConstructionService.constructHttpRequest(queryRequest, schemaModel);
 
         // Then
-        String id1 = result1.getId();
-        String id2 = result2.getId();
+        UUID id1 = result1.getId();
+        UUID id2 = result2.getId();
 
         assertNotNull(id1);
         assertNotNull(id2);
         assertNotEquals(id1, id2, "Correlation IDs should be unique for each request");
-
-        // Verify IDs are valid UUIDs
-        assertDoesNotThrow(() -> UUID.fromString(id1));
-        assertDoesNotThrow(() -> UUID.fromString(id2));
     }
 
     @Test
@@ -140,12 +136,12 @@ class MLHttpConstructionServiceTest {
         QuerySchemaRequest result = mlHttpConstructionService.constructHttpRequest(queryRequest, schemaModel);
 
         // Then
-        String correlationId = result.getId();
+        UUID correlationId = result.getId();
         String callbackUrl = result.getCallbackUrl();
 
         assertNotNull(correlationId);
         assertNotNull(callbackUrl);
-        assertTrue(callbackUrl.contains(correlationId),
+        assertTrue(callbackUrl.contains(correlationId.toString()),
                 "Callback URL should contain the correlation ID");
     }
 
