@@ -1,22 +1,17 @@
 package com.text2sql.text2sql_springboot.Services;
 
-import com.text2sql.text2sql_springboot.DTO.MLPingDto;
+import com.text2sql.text2sql_springboot.DTO.MLPingResponse;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 
 
-import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.*;
 
 
@@ -35,7 +30,7 @@ class QueryServiceIntegrationTest {
     @Order(1)
     @DisplayName("Test External Service with ping")
     public void ShouldReturnTrue_ping_WhenExternalServicePinged() {
-        ResponseEntity<MLPingDto> response = queryService.ping();
+        ResponseEntity<MLPingResponse> response = queryService.ping();
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());

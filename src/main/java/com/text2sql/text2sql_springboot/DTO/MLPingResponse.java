@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
 
-public record MLPingDto(
+public record MLPingResponse(
         @NotNull
         Boolean ok,
 
