@@ -19,28 +19,21 @@ import java.util.UUID;
 @Service
 public class SchemaModelConstructionService {
     private final TableVariablesRepository tableVariablesRepository;
-    private final UserDatabaseRepository userDatabaseRepository;
     private final UserTableRepository userTableRepository;
 
     public SchemaModelConstructionService(
             TableVariablesRepository tableVariablesRepository,
-            UserDatabaseRepository userDatabaseRepository,
             UserTableRepository userTableRepository
     ) {
         this.tableVariablesRepository = tableVariablesRepository;
-        this.userDatabaseRepository = userDatabaseRepository;
         this.userTableRepository = userTableRepository;
     }
 
-    public SchemaModel constructSchema(UUID dbId) throws ResponseStatusException {
-        Optional<UserDatabase> db = userDatabaseRepository.findById(dbId);
-        if (db.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Database not found");
-        }
+    public SchemaModel constructSchema(UserDatabase db) throws ResponseStatusException {
         SchemaModel.Builder builder = new SchemaModel.Builder();
-        builder.setDbId(db.get().getDatabaseName());
+        builder.setDbId(db.getDatabaseName());
 
-        List<UserTable> tables = userTableRepository.findByUserDatabase(db.get());
+        List<UserTable> tables = userTableRepository.findByUserDatabase(db);
         if (tables.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No Tables Present");
         }

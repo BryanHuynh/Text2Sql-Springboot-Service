@@ -26,8 +26,6 @@ class SchemaModelConstructionServiceTest {
     @Mock
     private TableVariablesRepository tableVariablesRepository;
     @Mock
-    private UserDatabaseRepository userDatabaseRepository;
-    @Mock
     private UserTableRepository userTableRepository;
 
     @InjectMocks
@@ -87,7 +85,6 @@ class SchemaModelConstructionServiceTest {
                         .fkRef(warehouseCode)
         );
 
-        when(userDatabaseRepository.findById(userDatabase.getId())).thenReturn(Optional.of(userDatabase));
         when(userTableRepository.findByUserDatabase(userDatabase)).thenReturn(List.of(warehouseTable, boxesTable));
         when(tableVariablesRepository.findAllByUserTable(warehouseTable)).thenReturn(List.of(warehouseCode, warehouseLocation, warehouseCapacity));
         when(tableVariablesRepository.findAllByUserTable(boxesTable)).thenReturn(List.of(boxesCode, boxesContents, boxesValue, boxesWarehouse));
@@ -122,17 +119,7 @@ class SchemaModelConstructionServiceTest {
         ObjectMapper mapper = new ObjectMapper();
         String expectedJson = mapper.writeValueAsString(expectedSchema);
 
-        assertEquals(expectedJson, schemaModelConstructionService.constructSchema(userDatabase.getId()).toSchemaJson());
-    }
-
-    @Test
-    void ShouldReturnBadRequest_constructSchema_WhenDbIdIsInvalid() {
-        UUID uuid = UUID.randomUUID();
-        when(userDatabaseRepository.findById(uuid)).thenReturn(Optional.empty());
-
-        assertThrows(ResponseStatusException.class, () -> {
-            schemaModelConstructionService.constructSchema(uuid);
-        });
+        assertEquals(expectedJson, schemaModelConstructionService.constructSchema(userDatabase).toSchemaJson());
     }
 
 
@@ -140,11 +127,10 @@ class SchemaModelConstructionServiceTest {
     void ShouldReturnBadRequest_constructSchema_WhenNoTablesExist() {
         UserDetail userDetail = new UserDetail("001", "test@email.com");
         UserDatabase userDatabase = new UserDatabase("warehouse_1", userDetail);
-        when(userDatabaseRepository.findById(userDatabase.getId())).thenReturn(Optional.of(userDatabase));
         when(userTableRepository.findByUserDatabase(userDatabase)).thenReturn(List.of());
 
         assertThrows(ResponseStatusException.class, () -> {
-            schemaModelConstructionService.constructSchema(userDatabase.getId());
+            schemaModelConstructionService.constructSchema(userDatabase);
         });
     }
 
@@ -154,12 +140,11 @@ class SchemaModelConstructionServiceTest {
         UserDatabase userDatabase = new UserDatabase("warehouse_1", userDetail);
         UserTable warehouseTable = new UserTable("Warehouses", userDatabase);
 
-        when(userDatabaseRepository.findById(userDatabase.getId())).thenReturn(Optional.of(userDatabase));
         when(userTableRepository.findByUserDatabase(userDatabase)).thenReturn(List.of(warehouseTable));
         when(tableVariablesRepository.findAllByUserTable(warehouseTable)).thenReturn(List.of());
 
         assertThrows(ResponseStatusException.class, () -> {
-            schemaModelConstructionService.constructSchema(userDatabase.getId());
+            schemaModelConstructionService.constructSchema(userDatabase);
         });
     }
 
@@ -177,7 +162,6 @@ class SchemaModelConstructionServiceTest {
                         .variableType("number")
                         .pkFlag(true));
 
-        when(userDatabaseRepository.findById(userDatabase.getId())).thenReturn(Optional.of(userDatabase));
         when(userTableRepository.findByUserDatabase(userDatabase)).thenReturn(List.of(warehouseTable, boxesTable));
         when(tableVariablesRepository.findAllByUserTable(warehouseTable)).thenReturn(List.of(warehouseCode));
         when(tableVariablesRepository.findAllByUserTable(boxesTable)).thenReturn(List.of());
@@ -207,6 +191,6 @@ class SchemaModelConstructionServiceTest {
         ObjectMapper mapper = new ObjectMapper();
         String expectedJson = mapper.writeValueAsString(expectedSchema);
 
-        assertEquals(expectedJson, schemaModelConstructionService.constructSchema(userDatabase.getId()).toSchemaJson());
+        assertEquals(expectedJson, schemaModelConstructionService.constructSchema(userDatabase).toSchemaJson());
     }
 }
