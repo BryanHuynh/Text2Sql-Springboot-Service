@@ -1,40 +1,33 @@
 package com.text2sql.text2sql_springboot.Services;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.text2sql.text2sql_springboot.Config.MLServiceProps;
 import com.text2sql.text2sql_springboot.DTO.*;
 import com.text2sql.text2sql_springboot.Entities.*;
 import com.text2sql.text2sql_springboot.Repositories.PendingJobsRepository;
 import com.text2sql.text2sql_springboot.Repositories.UserDatabaseRepository;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.*;
 
 @Service
 public class QueryService {
     private final PendingJobsRepository pendingJobsRepository;
-    private final MLServiceProps mlServiceProps;
-    private final SignatureService signatureService;
+    private final MLServiceClient mlServiceClient;
     private final SchemaModelConstructionService smConstructionService;
     private final QueryConstructionService querySchemaConstructionService;
     private final UserDatabaseRepository userDatabaseRepository;
 
     public QueryService(
             PendingJobsRepository pendingJobsRepository,
-            MLServiceProps mlServiceProps,
-            SignatureService signatureService,
+            MLServiceClient mlServiceClient,
             SchemaModelConstructionService schemaModelConstructionService,
             QueryConstructionService querySchemaConstructionService,
             UserDatabaseRepository userDatabaseRepository
     ) {
         this.pendingJobsRepository = pendingJobsRepository;
-        this.mlServiceProps = mlServiceProps;
-        this.signatureService = signatureService;
+        this.mlServiceClient = mlServiceClient;
         this.smConstructionService = schemaModelConstructionService;
         this.querySchemaConstructionService = querySchemaConstructionService;
         this.userDatabaseRepository = userDatabaseRepository;
@@ -52,24 +45,8 @@ public class QueryService {
         SchemaModel schema = smConstructionService.constructSchema(db.get());
         QuerySchemaRequest payloadRequest = querySchemaConstructionService.constructHttpRequest(request, schema);
 
-        ObjectMapper mapper = new ObjectMapper();
-        String payload = mapper.writeValueAsString(payloadRequest);
+        ResponseEntity<MLQueueResponse> response = mlServiceClient.queueJob(payloadRequest);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("X-Webhook-Signature", signatureService.generateSignature(payload));
-
-        HttpEntity<String> httpRequest = new HttpEntity<>(payload, headers);
-        RestTemplate restTemplate = new RestTemplate();
-
-        ResponseEntity<MLQueueResponse> response = restTemplate.postForEntity(
-                UriComponentsBuilder.fromUriString(mlServiceProps.getUrl())
-                        .path("queue")
-                        .build()
-                        .toUriString(),
-                httpRequest,
-                MLQueueResponse.class
-        );
         if (response.getStatusCode().is2xxSuccessful()
                 && response.getBody() != null
                 && response.getBody().ok()
@@ -86,8 +63,7 @@ public class QueryService {
     }
 
     public ResponseEntity<MLPingResponse> ping() {
-        RestTemplate restTemplate = new RestTemplate();
-        return restTemplate.getForEntity(mlServiceProps.getUrl() + "/ping", MLPingResponse.class);
+        return mlServiceClient.ping();
     }
 
 

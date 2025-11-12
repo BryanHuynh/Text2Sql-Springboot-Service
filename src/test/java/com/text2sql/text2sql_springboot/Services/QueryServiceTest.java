@@ -1,7 +1,6 @@
 package com.text2sql.text2sql_springboot.Services;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.text2sql.text2sql_springboot.Config.MLServiceProps;
 import com.text2sql.text2sql_springboot.DTO.*;
 import com.text2sql.text2sql_springboot.Entities.PendingJobs;
 import com.text2sql.text2sql_springboot.Entities.UserDatabase;
@@ -12,13 +11,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockedConstruction;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -35,10 +30,7 @@ class QueryServiceTest {
     private PendingJobsRepository pendingJobsRepository;
 
     @Mock
-    private MLServiceProps mlServiceProps;
-
-    @Mock
-    private SignatureService signatureService;
+    private MLServiceClient mlServiceClient;
 
     @Mock
     private SchemaModelConstructionService smConstructionService;
@@ -63,8 +55,7 @@ class QueryServiceTest {
     void setUp() {
         queryService = new QueryService(
                 pendingJobsRepository,
-                mlServiceProps,
-                signatureService,
+                mlServiceClient,
                 smConstructionService,
                 httpConstructionService,
                 userDatabaseRepository
@@ -92,36 +83,30 @@ class QueryServiceTest {
                 .schema(testSchemaModel.toSchemaMap())
                 .callbackUrl("http://callback.url")
                 .build();
-
-        when(mlServiceProps.getUrl()).thenReturn("http://ml-service.test");
     }
 
     @Test
-    void query_shouldThrowException_whenDatabaseNotFound() {
+    void query_shouldThrowException_whenDatabaseNotFound() throws JsonProcessingException {
+        // Arrange
         when(userDatabaseRepository.findById(testDatabaseId)).thenReturn(Optional.empty());
 
         MLPingResponse pingResponse = new MLPingResponse(true, LocalDateTime.now());
         ResponseEntity<MLPingResponse> pingResponseEntity = new ResponseEntity<>(pingResponse, HttpStatus.OK);
+        when(mlServiceClient.ping()).thenReturn(pingResponseEntity);
 
-        try (MockedConstruction<RestTemplate> mockedConstruction = mockConstruction(RestTemplate.class,
-                (mock, context) -> {
-                    when(mock.getForEntity(
-                            anyString(),
-                            eq(MLPingResponse.class))
-                    ).thenReturn(pingResponseEntity);
-                })) {
+        // Act & Assert
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> queryService.query(testQueryRequest)
+        );
 
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
-                    () -> queryService.query(testQueryRequest)
-            );
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+        assertEquals("Database not found", exception.getReason());
 
-            assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
-            assertEquals("Database not found", exception.getReason());
-
-            verify(userDatabaseRepository).findById(testDatabaseId);
-            verifyNoInteractions(smConstructionService, httpConstructionService, signatureService, pendingJobsRepository);
-        }
+        verify(mlServiceClient).ping();
+        verify(userDatabaseRepository).findById(testDatabaseId);
+        verifyNoInteractions(smConstructionService, httpConstructionService, pendingJobsRepository);
+        verifyNoMoreInteractions(mlServiceClient);
     }
 
     @Test
@@ -129,86 +114,54 @@ class QueryServiceTest {
         // Arrange
         MLPingResponse pingResponse = new MLPingResponse(false, LocalDateTime.now());
         ResponseEntity<MLPingResponse> pingResponseEntity = new ResponseEntity<>(pingResponse, HttpStatus.SERVICE_UNAVAILABLE);
+        when(mlServiceClient.ping()).thenReturn(pingResponseEntity);
 
-        try (MockedConstruction<RestTemplate> mockedConstruction = mockConstruction(RestTemplate.class,
-                (mock, context) -> {
-                    when(mock.getForEntity(
-                            anyString(),
-                            eq(MLPingResponse.class))
-                    ).thenReturn(pingResponseEntity);
-                })) {
+        // Act & Assert
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> queryService.query(testQueryRequest)
+        );
 
-            // Act & Assert
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
-                    () -> queryService.query(testQueryRequest)
-            );
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, exception.getStatusCode());
+        assertEquals("Upstream Server unreachable. Please try again later", exception.getReason());
 
-            assertEquals(HttpStatus.SERVICE_UNAVAILABLE, exception.getStatusCode());
-            assertEquals("Upstream Server unreachable. Please try again later", exception.getReason());
-
-            // Verify that no other services were called since ping failed early
-            verifyNoInteractions(userDatabaseRepository, smConstructionService, httpConstructionService, signatureService, pendingJobsRepository);
-        }
+        verify(mlServiceClient).ping();
+        verifyNoInteractions(userDatabaseRepository, smConstructionService, httpConstructionService, pendingJobsRepository);
+        verifyNoMoreInteractions(mlServiceClient);
     }
 
     @Test
     void query_shouldSuccessfullyQueueJob_whenAllConditionsAreMet() throws JsonProcessingException {
+        // Arrange
         when(userDatabaseRepository.findById(testDatabaseId)).thenReturn(Optional.of(testUserDatabase));
         when(smConstructionService.constructSchema(testUserDatabase)).thenReturn(testSchemaModel);
         when(httpConstructionService.constructHttpRequest(testQueryRequest, testSchemaModel))
                 .thenReturn(testQuerySchemaRequest);
-        when(signatureService.generateSignature(anyString())).thenReturn("test-signature");
-
-        MLQueueResponse successResponse = new MLQueueResponse(true, MLQueueStatusResponses.queued, "Job queued successfully");
-        ResponseEntity<MLQueueResponse> responseEntity = new ResponseEntity<>(successResponse, HttpStatus.OK);
+        when(pendingJobsRepository.save(any(PendingJobs.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         MLPingResponse pingResponse = new MLPingResponse(true, LocalDateTime.now());
         ResponseEntity<MLPingResponse> pingResponseEntity = new ResponseEntity<>(pingResponse, HttpStatus.OK);
+        when(mlServiceClient.ping()).thenReturn(pingResponseEntity);
 
-        when(pendingJobsRepository.save(any(PendingJobs.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        MLQueueResponse successResponse = new MLQueueResponse(true, MLQueueStatusResponses.queued, "Job queued successfully");
+        ResponseEntity<MLQueueResponse> responseEntity = new ResponseEntity<>(successResponse, HttpStatus.OK);
+        when(mlServiceClient.queueJob(testQuerySchemaRequest)).thenReturn(responseEntity);
 
-        try (MockedConstruction<RestTemplate> mockedConstruction = mockConstruction(RestTemplate.class,
-                (mock, context) -> {
-                    when(mock.postForEntity(
-                            anyString(),
-                            any(HttpEntity.class),
-                            eq(MLQueueResponse.class))
-                    ).thenReturn(responseEntity);
-                    when(mock.getForEntity(
-                            anyString(),
-                            eq(MLPingResponse.class))
-                    ).thenReturn(pingResponseEntity);
-                })) {
+        // Act
+        queryService.query(testQueryRequest);
 
-            // Act
-            queryService.query(testQueryRequest);
-
-            // Assert
-            verify(userDatabaseRepository).findById(testDatabaseId);
-            verify(smConstructionService).constructSchema(testUserDatabase);
-            verify(httpConstructionService).constructHttpRequest(testQueryRequest, testSchemaModel);
-            verify(signatureService).generateSignature(anyString());
-            assertEquals(2, mockedConstruction.constructed().size());
-            RestTemplate postRestTemplate = mockedConstruction.constructed().get(1);
-            RestTemplate pingRestTemplate = mockedConstruction.constructed().get(0);
-            verify(postRestTemplate).postForEntity(
-                    contains("http://ml-service.test"),
-                    any(HttpEntity.class),
-                    eq(MLQueueResponse.class)
-            );
-            verify(pingRestTemplate).getForEntity(
-                    contains("http://ml-service.test/ping"),
-                    eq(MLPingResponse.class)
-            );
-            verify(pendingJobsRepository).save(argThat(pendingJob ->
-                    pendingJob.getCorrelationId().equals(testCorrelationId) &&
-                            pendingJob.getUserDetail().equals(testUserDetail) &&
-                            pendingJob.getJobStatus() == PendingJobs.JobStatus.STARTED
-            ));
-            verify(pendingJobsRepository, times(1))
-                    .save(any(PendingJobs.class));
-        }
+        // Assert
+        verify(mlServiceClient).ping();
+        verify(userDatabaseRepository).findById(testDatabaseId);
+        verify(smConstructionService).constructSchema(testUserDatabase);
+        verify(httpConstructionService).constructHttpRequest(testQueryRequest, testSchemaModel);
+        verify(mlServiceClient).queueJob(testQuerySchemaRequest);
+        verify(pendingJobsRepository).save(argThat(pendingJob ->
+                pendingJob.getCorrelationId().equals(testCorrelationId) &&
+                        pendingJob.getUserDetail().equals(testUserDetail) &&
+                        pendingJob.getJobStatus() == PendingJobs.JobStatus.STARTED
+        ));
+        verify(pendingJobsRepository, times(1)).save(any(PendingJobs.class));
     }
 
     @Test
@@ -218,51 +171,28 @@ class QueryServiceTest {
         when(smConstructionService.constructSchema(testUserDatabase)).thenReturn(testSchemaModel);
         when(httpConstructionService.constructHttpRequest(testQueryRequest, testSchemaModel))
                 .thenReturn(testQuerySchemaRequest);
-        when(signatureService.generateSignature(anyString())).thenReturn("test-signature");
-
-        MLQueueResponse failureResponse = new MLQueueResponse(true, MLQueueStatusResponses.queued, "Job queued");
-        ResponseEntity<MLQueueResponse> responseEntity = new ResponseEntity<>(failureResponse, HttpStatus.INTERNAL_SERVER_ERROR);
 
         MLPingResponse pingResponse = new MLPingResponse(true, LocalDateTime.now());
         ResponseEntity<MLPingResponse> pingResponseEntity = new ResponseEntity<>(pingResponse, HttpStatus.OK);
+        when(mlServiceClient.ping()).thenReturn(pingResponseEntity);
 
-        try (MockedConstruction<RestTemplate> mockedConstruction = mockConstruction(RestTemplate.class,
-                (mock, context) -> {
-                    when(mock.postForEntity(
-                            anyString(),
-                            any(HttpEntity.class),
-                            eq(MLQueueResponse.class)
-                    )).thenReturn(responseEntity);
-                    when(mock.getForEntity(
-                            anyString(),
-                            eq(MLPingResponse.class))
-                    ).thenReturn(pingResponseEntity);
-                })) {
+        MLQueueResponse failureResponse = new MLQueueResponse(true, MLQueueStatusResponses.queued, "Job queued");
+        ResponseEntity<MLQueueResponse> responseEntity = new ResponseEntity<>(failureResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        when(mlServiceClient.queueJob(testQuerySchemaRequest)).thenReturn(responseEntity);
 
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
-                    () -> queryService.query(testQueryRequest));
-            assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, exception.getStatusCode());
-            assertEquals(2, mockedConstruction.constructed().size());
-            verify(userDatabaseRepository).findById(testDatabaseId);
-            verify(smConstructionService).constructSchema(testUserDatabase);
-            verify(httpConstructionService).constructHttpRequest(testQueryRequest, testSchemaModel);
-            verify(signatureService).generateSignature(anyString());
-            assertEquals(2, mockedConstruction.constructed().size());
-            RestTemplate postRestTemplate = mockedConstruction.constructed().get(1);
-            RestTemplate pingRestTemplate = mockedConstruction.constructed().get(0);
-            verify(postRestTemplate).postForEntity(
-                    contains("http://ml-service.test"),
-                    any(HttpEntity.class),
-                    eq(MLQueueResponse.class)
-            );
-            verify(pingRestTemplate).getForEntity(
-                    contains("http://ml-service.test/ping"),
-                    eq(MLPingResponse.class)
-            );
-            verifyNoInteractions(pendingJobsRepository);
+        // Act & Assert
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> queryService.query(testQueryRequest)
+        );
 
-        }
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, exception.getStatusCode());
+        verify(mlServiceClient).ping();
+        verify(userDatabaseRepository).findById(testDatabaseId);
+        verify(smConstructionService).constructSchema(testUserDatabase);
+        verify(httpConstructionService).constructHttpRequest(testQueryRequest, testSchemaModel);
+        verify(mlServiceClient).queueJob(testQuerySchemaRequest);
+        verifyNoInteractions(pendingJobsRepository);
     }
 
     @Test
@@ -272,46 +202,25 @@ class QueryServiceTest {
         when(smConstructionService.constructSchema(testUserDatabase)).thenReturn(testSchemaModel);
         when(httpConstructionService.constructHttpRequest(testQueryRequest, testSchemaModel))
                 .thenReturn(testQuerySchemaRequest);
-        when(signatureService.generateSignature(anyString())).thenReturn("test-signature");
-
-        ResponseEntity<MLQueueResponse> responseEntity = new ResponseEntity<>(null, HttpStatus.OK);
 
         MLPingResponse pingResponse = new MLPingResponse(true, LocalDateTime.now());
         ResponseEntity<MLPingResponse> pingResponseEntity = new ResponseEntity<>(pingResponse, HttpStatus.OK);
+        when(mlServiceClient.ping()).thenReturn(pingResponseEntity);
 
-        try (MockedConstruction<RestTemplate> mockedConstruction = mockConstruction(RestTemplate.class,
-                (mock, context) -> {
-                    when(mock.postForEntity(
-                            anyString(),
-                            any(HttpEntity.class),
-                            eq(MLQueueResponse.class)
-                    )).thenReturn(responseEntity);
-                    when(mock.getForEntity(
-                            anyString(),
-                            eq(MLPingResponse.class))
-                    ).thenReturn(pingResponseEntity);
-                })) {
+        ResponseEntity<MLQueueResponse> responseEntity = new ResponseEntity<>(null, HttpStatus.OK);
+        when(mlServiceClient.queueJob(testQuerySchemaRequest)).thenReturn(responseEntity);
 
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
-                    () -> queryService.query(testQueryRequest));
-            assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, exception.getStatusCode());
-            assertEquals(2, mockedConstruction.constructed().size());
-            RestTemplate postRestTemplate = mockedConstruction.constructed().get(1);
-            RestTemplate pingRestTemplate = mockedConstruction.constructed().get(0);
-            verify(postRestTemplate).postForEntity(
-                    contains("http://ml-service.test"),
-                    any(HttpEntity.class),
-                    eq(MLQueueResponse.class)
-            );
-            verify(pingRestTemplate).getForEntity(
-                    contains("http://ml-service.test/ping"),
-                    eq(MLPingResponse.class)
-            );
+        // Act & Assert
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> queryService.query(testQueryRequest)
+        );
 
-            verify(userDatabaseRepository).findById(testDatabaseId);
-            verifyNoInteractions(pendingJobsRepository);
-        }
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, exception.getStatusCode());
+        verify(mlServiceClient).ping();
+        verify(mlServiceClient).queueJob(testQuerySchemaRequest);
+        verify(userDatabaseRepository).findById(testDatabaseId);
+        verifyNoInteractions(pendingJobsRepository);
     }
 
     @Test
@@ -321,47 +230,26 @@ class QueryServiceTest {
         when(smConstructionService.constructSchema(testUserDatabase)).thenReturn(testSchemaModel);
         when(httpConstructionService.constructHttpRequest(testQueryRequest, testSchemaModel))
                 .thenReturn(testQuerySchemaRequest);
-        when(signatureService.generateSignature(anyString())).thenReturn("test-signature");
-
-        MLQueueResponse failureResponse = new MLQueueResponse(false, MLQueueStatusResponses.queued, "Error occurred");
-        ResponseEntity<MLQueueResponse> responseEntity = new ResponseEntity<>(failureResponse, HttpStatus.OK);
 
         MLPingResponse pingResponse = new MLPingResponse(true, LocalDateTime.now());
         ResponseEntity<MLPingResponse> pingResponseEntity = new ResponseEntity<>(pingResponse, HttpStatus.OK);
+        when(mlServiceClient.ping()).thenReturn(pingResponseEntity);
 
-        try (MockedConstruction<RestTemplate> mockedConstruction = mockConstruction(RestTemplate.class,
-                (mock, context) -> {
-                    when(mock.postForEntity(
-                            anyString(),
-                            any(HttpEntity.class),
-                            eq(MLQueueResponse.class)
-                    )).thenReturn(responseEntity);
-                    when(mock.getForEntity(
-                            anyString(),
-                            eq(MLPingResponse.class))
-                    ).thenReturn(pingResponseEntity);
-                })) {
+        MLQueueResponse failureResponse = new MLQueueResponse(false, MLQueueStatusResponses.queued, "Error occurred");
+        ResponseEntity<MLQueueResponse> responseEntity = new ResponseEntity<>(failureResponse, HttpStatus.OK);
+        when(mlServiceClient.queueJob(testQuerySchemaRequest)).thenReturn(responseEntity);
 
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
-                    () -> queryService.query(testQueryRequest));
-            assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, exception.getStatusCode());
-            assertEquals(2, mockedConstruction.constructed().size());
-            RestTemplate postRestTemplate = mockedConstruction.constructed().get(1);
-            RestTemplate pingRestTemplate = mockedConstruction.constructed().get(0);
-            verify(postRestTemplate).postForEntity(
-                    contains("http://ml-service.test"),
-                    any(HttpEntity.class),
-                    eq(MLQueueResponse.class)
-            );
-            verify(pingRestTemplate).getForEntity(
-                    contains("http://ml-service.test/ping"),
-                    eq(MLPingResponse.class)
-            );
+        // Act & Assert
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> queryService.query(testQueryRequest)
+        );
 
-            verify(userDatabaseRepository).findById(testDatabaseId);
-            verifyNoInteractions(pendingJobsRepository);
-        }
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, exception.getStatusCode());
+        verify(mlServiceClient).ping();
+        verify(mlServiceClient).queueJob(testQuerySchemaRequest);
+        verify(userDatabaseRepository).findById(testDatabaseId);
+        verifyNoInteractions(pendingJobsRepository);
     }
 
     @Test
@@ -371,95 +259,26 @@ class QueryServiceTest {
         when(smConstructionService.constructSchema(testUserDatabase)).thenReturn(testSchemaModel);
         when(httpConstructionService.constructHttpRequest(testQueryRequest, testSchemaModel))
                 .thenReturn(testQuerySchemaRequest);
-        when(signatureService.generateSignature(anyString())).thenReturn("test-signature");
+
+        MLPingResponse pingResponse = new MLPingResponse(true, LocalDateTime.now());
+        ResponseEntity<MLPingResponse> pingResponseEntity = new ResponseEntity<>(pingResponse, HttpStatus.OK);
+        when(mlServiceClient.ping()).thenReturn(pingResponseEntity);
 
         MLQueueResponse processingResponse = new MLQueueResponse(true, MLQueueStatusResponses.processing, "Already processing");
         ResponseEntity<MLQueueResponse> responseEntity = new ResponseEntity<>(processingResponse, HttpStatus.OK);
+        when(mlServiceClient.queueJob(testQuerySchemaRequest)).thenReturn(responseEntity);
 
-        MLPingResponse pingResponse = new MLPingResponse(true, LocalDateTime.now());
-        ResponseEntity<MLPingResponse> pingResponseEntity = new ResponseEntity<>(pingResponse, HttpStatus.OK);
+        // Act & Assert
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> queryService.query(testQueryRequest)
+        );
 
-        try (MockedConstruction<RestTemplate> mockedConstruction = mockConstruction(RestTemplate.class,
-                (mock, context) -> {
-                    when(mock.postForEntity(
-                            anyString(),
-                            any(HttpEntity.class),
-                            eq(MLQueueResponse.class)
-                    )).thenReturn(responseEntity);
-                    when(mock.getForEntity(
-                            anyString(),
-                            eq(MLPingResponse.class))
-                    ).thenReturn(pingResponseEntity);
-                })) {
-
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
-                    () -> queryService.query(testQueryRequest));
-            assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, exception.getStatusCode());
-            assertEquals(2, mockedConstruction.constructed().size());
-            RestTemplate postRestTemplate = mockedConstruction.constructed().get(1);
-            RestTemplate pingRestTemplate = mockedConstruction.constructed().get(0);
-            verify(postRestTemplate).postForEntity(
-                    contains("http://ml-service.test"),
-                    any(HttpEntity.class),
-                    eq(MLQueueResponse.class)
-            );
-            verify(pingRestTemplate).getForEntity(
-                    contains("http://ml-service.test/ping"),
-                    eq(MLPingResponse.class)
-            );
-
-            verify(userDatabaseRepository).findById(testDatabaseId);
-            verifyNoInteractions(pendingJobsRepository);
-        }
-    }
-
-    @Test
-    void query_shouldIncludeCorrectHeadersInRequest() throws JsonProcessingException {
-        // Arrange
-        when(userDatabaseRepository.findById(testDatabaseId)).thenReturn(Optional.of(testUserDatabase));
-        when(smConstructionService.constructSchema(testUserDatabase)).thenReturn(testSchemaModel);
-        when(httpConstructionService.constructHttpRequest(testQueryRequest, testSchemaModel))
-                .thenReturn(testQuerySchemaRequest);
-
-        String expectedSignature = "test-signature-12345";
-        when(signatureService.generateSignature(anyString())).thenReturn(expectedSignature);
-
-        MLQueueResponse successResponse = new MLQueueResponse(true, MLQueueStatusResponses.queued, "Queued");
-        ResponseEntity<MLQueueResponse> responseEntity = new ResponseEntity<>(successResponse, HttpStatus.OK);
-
-        MLPingResponse pingResponse = new MLPingResponse(true, LocalDateTime.now());
-        ResponseEntity<MLPingResponse> pingResponseEntity = new ResponseEntity<>(pingResponse, HttpStatus.OK);
-
-        try (MockedConstruction<RestTemplate> mockedConstruction = mockConstruction(RestTemplate.class,
-                (mock, context) -> {
-                    when(mock.postForEntity(
-                            anyString(),
-                            any(HttpEntity.class),
-                            eq(MLQueueResponse.class)
-                    )).thenReturn(responseEntity);
-                    when(mock.getForEntity(
-                            anyString(),
-                            eq(MLPingResponse.class))
-                    ).thenReturn(pingResponseEntity);
-                })) {
-
-            // Act
-            queryService.query(testQueryRequest);
-
-            // Assert
-            RestTemplate mockRestTemplate = mockedConstruction.constructed().get(1);
-            verify(mockRestTemplate).postForEntity(
-                    anyString(),
-                    argThat((HttpEntity<String> entity) -> {
-                        String contentType = Objects.requireNonNull(entity.getHeaders().getContentType()).toString();
-                        String signature = entity.getHeaders().getFirst("X-Webhook-Signature");
-                        return contentType.contains("application/json") &&
-                                expectedSignature.equals(signature);
-                    }),
-                    eq(MLQueueResponse.class)
-            );
-        }
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, exception.getStatusCode());
+        verify(mlServiceClient).ping();
+        verify(mlServiceClient).queueJob(testQuerySchemaRequest);
+        verify(userDatabaseRepository).findById(testDatabaseId);
+        verifyNoInteractions(pendingJobsRepository);
     }
 
     @Test
@@ -467,54 +286,16 @@ class QueryServiceTest {
         // Arrange
         MLPingResponse expectedPingResponse = new MLPingResponse(true, LocalDateTime.now());
         ResponseEntity<MLPingResponse> responseEntity = new ResponseEntity<>(expectedPingResponse, HttpStatus.OK);
+        when(mlServiceClient.ping()).thenReturn(responseEntity);
 
-        try (MockedConstruction<RestTemplate> mockedConstruction = mockConstruction(RestTemplate.class,
-                (mock, context) -> {
-                    when(mock.getForEntity(
-                            eq("http://ml-service.test/ping"),
-                            eq(MLPingResponse.class)
-                    )).thenReturn(responseEntity);
-                })) {
+        // Act
+        ResponseEntity<MLPingResponse> actualResponse = queryService.ping();
 
-            // Act
-            ResponseEntity<MLPingResponse> actualResponse = queryService.ping();
-
-            // Assert
-            assertNotNull(actualResponse);
-            assertEquals(HttpStatus.OK, actualResponse.getStatusCode());
-            assertEquals(expectedPingResponse, actualResponse.getBody());
-            assertTrue(actualResponse.getBody().ok());
-
-            RestTemplate mockRestTemplate = mockedConstruction.constructed().get(0);
-            verify(mockRestTemplate).getForEntity("http://ml-service.test/ping", MLPingResponse.class);
-        }
-    }
-
-    @Test
-    void ping_shouldConstructCorrectUrl() {
-        // Arrange
-        when(mlServiceProps.getUrl()).thenReturn("http://different-ml-service.test");
-
-        MLPingResponse pingResponse = new MLPingResponse(true, LocalDateTime.now());
-        ResponseEntity<MLPingResponse> responseEntity = new ResponseEntity<>(pingResponse, HttpStatus.OK);
-
-        try (MockedConstruction<RestTemplate> mockedConstruction = mockConstruction(RestTemplate.class,
-                (mock, context) -> {
-                    when(mock.getForEntity(
-                            anyString(),
-                            eq(MLPingResponse.class)
-                    )).thenReturn(responseEntity);
-                })) {
-
-            // Act
-            queryService.ping();
-
-            // Assert
-            RestTemplate mockRestTemplate = mockedConstruction.constructed().get(0);
-            verify(mockRestTemplate).getForEntity(
-                    eq("http://different-ml-service.test/ping"),
-                    eq(MLPingResponse.class)
-            );
-        }
+        // Assert
+        assertNotNull(actualResponse);
+        assertEquals(HttpStatus.OK, actualResponse.getStatusCode());
+        assertEquals(expectedPingResponse, actualResponse.getBody());
+        assertTrue(actualResponse.getBody().ok());
+        verify(mlServiceClient).ping();
     }
 }
