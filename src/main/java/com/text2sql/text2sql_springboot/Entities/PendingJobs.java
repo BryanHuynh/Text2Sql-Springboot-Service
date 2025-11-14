@@ -3,12 +3,15 @@ package com.text2sql.text2sql_springboot.Entities;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "PENDING_JOBS", schema = "public")
+@EntityListeners(AuditingEntityListener.class)
 public class PendingJobs {
     @Id
     @Column(name = "CORRELATION_ID")
@@ -23,16 +26,16 @@ public class PendingJobs {
     }
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "job_status", nullable = false, columnDefinition = "JOBSTATUS")
+    @Column(name = "job_status", nullable = false)
     private JobStatus jobStatus;
 
     @CreatedDate
     @Column(name = "created_date", nullable = false, updatable = false)
-    private OffsetDateTime createdDate;
+    private Instant createdDate;
 
     @LastModifiedDate
     @Column(name = "updated_date", nullable = false)
-    private OffsetDateTime updatedDate;
+    private Instant updatedDate;
 
     public JobStatus getJobStatus() {
         return jobStatus;
@@ -58,11 +61,11 @@ public class PendingJobs {
         this.correlationId = correlationId;
     }
 
-    public OffsetDateTime getCreatedDate() {
+    public Instant getCreatedDate() {
         return createdDate;
     }
 
-    public OffsetDateTime getUpdatedDate() {
+    public Instant getUpdatedDate() {
         return updatedDate;
     }
 

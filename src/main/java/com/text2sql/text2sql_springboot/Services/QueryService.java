@@ -36,29 +36,38 @@ public class QueryService {
 
     public void query(QueryRequest request) throws JsonProcessingException {
         if (!ping().getStatusCode().is2xxSuccessful()) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Upstream Server unreachable. Please try again later");
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                                              "Upstream Server unreachable. Please try again later");
         }
+        ;
         Optional<UserDatabase> db = userDatabaseRepository.findById(request.getDatabase_id());
         if (db.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Database not found");
         }
         SchemaModel schema = smConstructionService.constructSchema(db.get());
-        QuerySchemaRequest payloadRequest = querySchemaConstructionService.constructHttpRequest(request, schema);
+        QuerySchemaRequest payloadRequest = querySchemaConstructionService.constructHttpRequest(
+                request,
+                schema);
 
         ResponseEntity<MLQueueResponse> response = mlServiceClient.queueJob(payloadRequest);
 
         if (response.getStatusCode().is2xxSuccessful()
                 && response.getBody() != null
                 && response.getBody().ok()
-                && response.getBody().status().equals(MLQueueStatusResponses.queued)) {
-            pendingJobsRepository.save(
-                    new PendingJobs(
-                            payloadRequest.getId(),
-                            db.get().getUser(),
-                            PendingJobs.JobStatus.STARTED)
-            );
+                && !response.getBody().status().equals(MLQueueStatusResponses.error)
+        ) {
+            MLQueueResponse body = response.getBody();
+            if (body.status().equals(MLQueueStatusResponses.queued)) {
+                pendingJobsRepository.save(
+                        new PendingJobs(
+                                payloadRequest.getId(),
+                                db.get().getUser(),
+                                PendingJobs.JobStatus.STARTED)
+                );
+            }
         } else {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                                              "There was an error upstream");
         }
     }
 

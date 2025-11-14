@@ -91,7 +91,8 @@ class QueryServiceTest {
         when(userDatabaseRepository.findById(testDatabaseId)).thenReturn(Optional.empty());
 
         MLPingResponse pingResponse = new MLPingResponse(true, LocalDateTime.now());
-        ResponseEntity<MLPingResponse> pingResponseEntity = new ResponseEntity<>(pingResponse, HttpStatus.OK);
+        ResponseEntity<MLPingResponse> pingResponseEntity = new ResponseEntity<>(pingResponse,
+                                                                                 HttpStatus.OK);
         when(mlServiceClient.ping()).thenReturn(pingResponseEntity);
 
         // Act & Assert
@@ -113,7 +114,8 @@ class QueryServiceTest {
     void query_shouldThrowException_whenPingFails() {
         // Arrange
         MLPingResponse pingResponse = new MLPingResponse(false, LocalDateTime.now());
-        ResponseEntity<MLPingResponse> pingResponseEntity = new ResponseEntity<>(pingResponse, HttpStatus.SERVICE_UNAVAILABLE);
+        ResponseEntity<MLPingResponse> pingResponseEntity = new ResponseEntity<>(pingResponse,
+                                                                                 HttpStatus.SERVICE_UNAVAILABLE);
         when(mlServiceClient.ping()).thenReturn(pingResponseEntity);
 
         // Act & Assert
@@ -126,25 +128,34 @@ class QueryServiceTest {
         assertEquals("Upstream Server unreachable. Please try again later", exception.getReason());
 
         verify(mlServiceClient).ping();
-        verifyNoInteractions(userDatabaseRepository, smConstructionService, httpConstructionService, pendingJobsRepository);
+        verifyNoInteractions(userDatabaseRepository,
+                             smConstructionService,
+                             httpConstructionService,
+                             pendingJobsRepository);
         verifyNoMoreInteractions(mlServiceClient);
     }
 
     @Test
     void query_shouldSuccessfullyQueueJob_whenAllConditionsAreMet() throws JsonProcessingException {
         // Arrange
-        when(userDatabaseRepository.findById(testDatabaseId)).thenReturn(Optional.of(testUserDatabase));
+        when(userDatabaseRepository.findById(testDatabaseId)).thenReturn(Optional.of(
+                testUserDatabase));
         when(smConstructionService.constructSchema(testUserDatabase)).thenReturn(testSchemaModel);
         when(httpConstructionService.constructHttpRequest(testQueryRequest, testSchemaModel))
                 .thenReturn(testQuerySchemaRequest);
-        when(pendingJobsRepository.save(any(PendingJobs.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(pendingJobsRepository.save(any(PendingJobs.class))).thenAnswer(invocation -> invocation.getArgument(
+                0));
 
         MLPingResponse pingResponse = new MLPingResponse(true, LocalDateTime.now());
-        ResponseEntity<MLPingResponse> pingResponseEntity = new ResponseEntity<>(pingResponse, HttpStatus.OK);
+        ResponseEntity<MLPingResponse> pingResponseEntity = new ResponseEntity<>(pingResponse,
+                                                                                 HttpStatus.OK);
         when(mlServiceClient.ping()).thenReturn(pingResponseEntity);
 
-        MLQueueResponse successResponse = new MLQueueResponse(true, MLQueueStatusResponses.queued, "Job queued successfully");
-        ResponseEntity<MLQueueResponse> responseEntity = new ResponseEntity<>(successResponse, HttpStatus.OK);
+        MLQueueResponse successResponse = new MLQueueResponse(true,
+                                                              MLQueueStatusResponses.queued,
+                                                              "Job queued successfully");
+        ResponseEntity<MLQueueResponse> responseEntity = new ResponseEntity<>(successResponse,
+                                                                              HttpStatus.OK);
         when(mlServiceClient.queueJob(testQuerySchemaRequest)).thenReturn(responseEntity);
 
         // Act
@@ -157,9 +168,11 @@ class QueryServiceTest {
         verify(httpConstructionService).constructHttpRequest(testQueryRequest, testSchemaModel);
         verify(mlServiceClient).queueJob(testQuerySchemaRequest);
         verify(pendingJobsRepository).save(argThat(pendingJob ->
-                pendingJob.getCorrelationId().equals(testCorrelationId) &&
-                        pendingJob.getUserDetail().equals(testUserDetail) &&
-                        pendingJob.getJobStatus() == PendingJobs.JobStatus.STARTED
+                                                           pendingJob.getCorrelationId()
+                                                                   .equals(testCorrelationId) &&
+                                                                   pendingJob.getUserDetail()
+                                                                           .equals(testUserDetail) &&
+                                                                   pendingJob.getJobStatus() == PendingJobs.JobStatus.STARTED
         ));
         verify(pendingJobsRepository, times(1)).save(any(PendingJobs.class));
     }
@@ -167,17 +180,22 @@ class QueryServiceTest {
     @Test
     void query_shouldNotSavePendingJob_whenResponseIsNotSuccessful() throws JsonProcessingException {
         // Arrange
-        when(userDatabaseRepository.findById(testDatabaseId)).thenReturn(Optional.of(testUserDatabase));
+        when(userDatabaseRepository.findById(testDatabaseId)).thenReturn(Optional.of(
+                testUserDatabase));
         when(smConstructionService.constructSchema(testUserDatabase)).thenReturn(testSchemaModel);
         when(httpConstructionService.constructHttpRequest(testQueryRequest, testSchemaModel))
                 .thenReturn(testQuerySchemaRequest);
 
         MLPingResponse pingResponse = new MLPingResponse(true, LocalDateTime.now());
-        ResponseEntity<MLPingResponse> pingResponseEntity = new ResponseEntity<>(pingResponse, HttpStatus.OK);
+        ResponseEntity<MLPingResponse> pingResponseEntity = new ResponseEntity<>(pingResponse,
+                                                                                 HttpStatus.OK);
         when(mlServiceClient.ping()).thenReturn(pingResponseEntity);
 
-        MLQueueResponse failureResponse = new MLQueueResponse(true, MLQueueStatusResponses.queued, "Job queued");
-        ResponseEntity<MLQueueResponse> responseEntity = new ResponseEntity<>(failureResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        MLQueueResponse failureResponse = new MLQueueResponse(true,
+                                                              MLQueueStatusResponses.queued,
+                                                              "Job queued");
+        ResponseEntity<MLQueueResponse> responseEntity = new ResponseEntity<>(failureResponse,
+                                                                              HttpStatus.INTERNAL_SERVER_ERROR);
         when(mlServiceClient.queueJob(testQuerySchemaRequest)).thenReturn(responseEntity);
 
         // Act & Assert
@@ -198,13 +216,15 @@ class QueryServiceTest {
     @Test
     void query_shouldNotSavePendingJob_whenResponseBodyIsNull() throws JsonProcessingException {
         // Arrange
-        when(userDatabaseRepository.findById(testDatabaseId)).thenReturn(Optional.of(testUserDatabase));
+        when(userDatabaseRepository.findById(testDatabaseId)).thenReturn(Optional.of(
+                testUserDatabase));
         when(smConstructionService.constructSchema(testUserDatabase)).thenReturn(testSchemaModel);
         when(httpConstructionService.constructHttpRequest(testQueryRequest, testSchemaModel))
                 .thenReturn(testQuerySchemaRequest);
 
         MLPingResponse pingResponse = new MLPingResponse(true, LocalDateTime.now());
-        ResponseEntity<MLPingResponse> pingResponseEntity = new ResponseEntity<>(pingResponse, HttpStatus.OK);
+        ResponseEntity<MLPingResponse> pingResponseEntity = new ResponseEntity<>(pingResponse,
+                                                                                 HttpStatus.OK);
         when(mlServiceClient.ping()).thenReturn(pingResponseEntity);
 
         ResponseEntity<MLQueueResponse> responseEntity = new ResponseEntity<>(null, HttpStatus.OK);
@@ -226,17 +246,22 @@ class QueryServiceTest {
     @Test
     void query_shouldNotSavePendingJob_whenOkIsFalse() throws JsonProcessingException {
         // Arrange
-        when(userDatabaseRepository.findById(testDatabaseId)).thenReturn(Optional.of(testUserDatabase));
+        when(userDatabaseRepository.findById(testDatabaseId)).thenReturn(Optional.of(
+                testUserDatabase));
         when(smConstructionService.constructSchema(testUserDatabase)).thenReturn(testSchemaModel);
         when(httpConstructionService.constructHttpRequest(testQueryRequest, testSchemaModel))
                 .thenReturn(testQuerySchemaRequest);
 
         MLPingResponse pingResponse = new MLPingResponse(true, LocalDateTime.now());
-        ResponseEntity<MLPingResponse> pingResponseEntity = new ResponseEntity<>(pingResponse, HttpStatus.OK);
+        ResponseEntity<MLPingResponse> pingResponseEntity = new ResponseEntity<>(pingResponse,
+                                                                                 HttpStatus.OK);
         when(mlServiceClient.ping()).thenReturn(pingResponseEntity);
 
-        MLQueueResponse failureResponse = new MLQueueResponse(false, MLQueueStatusResponses.queued, "Error occurred");
-        ResponseEntity<MLQueueResponse> responseEntity = new ResponseEntity<>(failureResponse, HttpStatus.OK);
+        MLQueueResponse failureResponse = new MLQueueResponse(false,
+                                                              MLQueueStatusResponses.queued,
+                                                              "Error occurred");
+        ResponseEntity<MLQueueResponse> responseEntity = new ResponseEntity<>(failureResponse,
+                                                                              HttpStatus.OK);
         when(mlServiceClient.queueJob(testQuerySchemaRequest)).thenReturn(responseEntity);
 
         // Act & Assert
@@ -255,26 +280,27 @@ class QueryServiceTest {
     @Test
     void query_shouldNotSavePendingJob_whenStatusIsNotQueued() throws JsonProcessingException {
         // Arrange
-        when(userDatabaseRepository.findById(testDatabaseId)).thenReturn(Optional.of(testUserDatabase));
+        when(userDatabaseRepository.findById(testDatabaseId)).thenReturn(Optional.of(
+                testUserDatabase));
         when(smConstructionService.constructSchema(testUserDatabase)).thenReturn(testSchemaModel);
         when(httpConstructionService.constructHttpRequest(testQueryRequest, testSchemaModel))
                 .thenReturn(testQuerySchemaRequest);
 
         MLPingResponse pingResponse = new MLPingResponse(true, LocalDateTime.now());
-        ResponseEntity<MLPingResponse> pingResponseEntity = new ResponseEntity<>(pingResponse, HttpStatus.OK);
+        ResponseEntity<MLPingResponse> pingResponseEntity = new ResponseEntity<>(pingResponse,
+                                                                                 HttpStatus.OK);
         when(mlServiceClient.ping()).thenReturn(pingResponseEntity);
 
-        MLQueueResponse processingResponse = new MLQueueResponse(true, MLQueueStatusResponses.processing, "Already processing");
-        ResponseEntity<MLQueueResponse> responseEntity = new ResponseEntity<>(processingResponse, HttpStatus.OK);
+        MLQueueResponse processingResponse = new MLQueueResponse(true,
+                                                                 MLQueueStatusResponses.processing,
+                                                                 "Already processing");
+        ResponseEntity<MLQueueResponse> responseEntity = new ResponseEntity<>(processingResponse,
+                                                                              HttpStatus.OK);
         when(mlServiceClient.queueJob(testQuerySchemaRequest)).thenReturn(responseEntity);
 
-        // Act & Assert
-        ResponseStatusException exception = assertThrows(
-                ResponseStatusException.class,
-                () -> queryService.query(testQueryRequest)
-        );
+        queryService.query(testQueryRequest);
 
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, exception.getStatusCode());
+
         verify(mlServiceClient).ping();
         verify(mlServiceClient).queueJob(testQuerySchemaRequest);
         verify(userDatabaseRepository).findById(testDatabaseId);
@@ -285,7 +311,8 @@ class QueryServiceTest {
     void ping_shouldReturnResponseFromMLService() {
         // Arrange
         MLPingResponse expectedPingResponse = new MLPingResponse(true, LocalDateTime.now());
-        ResponseEntity<MLPingResponse> responseEntity = new ResponseEntity<>(expectedPingResponse, HttpStatus.OK);
+        ResponseEntity<MLPingResponse> responseEntity = new ResponseEntity<>(expectedPingResponse,
+                                                                             HttpStatus.OK);
         when(mlServiceClient.ping()).thenReturn(responseEntity);
 
         // Act
