@@ -14,7 +14,7 @@ public record TableVariableDto(
         Boolean pk_flag,
         Boolean fk_flag,
         UserTableDto userTable,
-        @Nullable TableVariableDto referenceTable,
+        @Nullable TableVariableDto referenceVariable,
         int order
 ) {
     public TableVariableDto(TableVariable variable) {

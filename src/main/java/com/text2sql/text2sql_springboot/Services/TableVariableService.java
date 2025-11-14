@@ -62,7 +62,7 @@ public class TableVariableService {
                 .userTable(userTable)
                 .order(count);
         if (req.referenceVariable().isPresent()) {
-            TableVariable ref = tableVariablesRepository.findById(req.referenceVariable().get()).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Reference Variable not Found"));
+            TableVariable ref = tableVariablesRepository.findById(req.referenceVariable().get().getId()).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Reference Variable not Found"));
             builder.fkRef(ref);
         }
         TableVariable saved = tableVariablesRepository.save(builder.build());
@@ -82,7 +82,7 @@ public class TableVariableService {
             tableVariable.setOrder(req.order().get());
         }
         if (req.referenceVariable().isPresent()) {
-            TableVariable ref = tableVariablesRepository.findById(req.referenceVariable().get()).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Reference Variable not Found"));
+            TableVariable ref = tableVariablesRepository.findById(req.referenceVariable().get().getId()).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Reference Variable not Found"));
             tableVariable.setFkRef(ref);
         }
         TableVariable saved = tableVariablesRepository.save(tableVariable);

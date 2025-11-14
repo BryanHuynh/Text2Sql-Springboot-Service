@@ -78,18 +78,20 @@ class UserDatabaseServiceTest {
 
     @Test
     void create_shouldPersistAndReturnDto() {
-        CreateUserDatabaseRequest req = mock(CreateUserDatabaseRequest.class);
-        when(req.user_id()).thenReturn("u-1");
-        when(req.filename()).thenReturn("My DB");
+        try (MockedStatic<AppContext> mocked = mockStatic(AppContext.class)) {
+            CreateUserDatabaseRequest req = mock(CreateUserDatabaseRequest.class);
+            mocked.when(AppContext::getCurrentUserId).thenReturn("u-1");
+            when(req.filename()).thenReturn("My DB");
 
-        UserDetail user = new UserDetail("u-1", "u1@example.com");
-        when(userRepository.getReferenceById("u-1")).thenReturn(user);
+            UserDetail user = new UserDetail("u-1", "u1@example.com");
+            when(userRepository.getReferenceById("u-1")).thenReturn(user);
 
-        UserDatabase persisted = new UserDatabase("My DB", user);
-        when(userDatabaseRepository.save(any(UserDatabase.class))).thenReturn(persisted);
+            UserDatabase persisted = new UserDatabase("My DB", user);
+            when(userDatabaseRepository.save(any(UserDatabase.class))).thenReturn(persisted);
 
-        UserDatabaseDto dto = userDatabaseService.create(req);
+            UserDatabaseDto dto = userDatabaseService.create(req);
 
-        assertEquals("My DB", dto.filename());
+            assertEquals("My DB", dto.filename());
+        }
     }
 }
