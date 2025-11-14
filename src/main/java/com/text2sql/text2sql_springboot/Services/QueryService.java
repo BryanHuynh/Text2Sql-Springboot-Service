@@ -62,7 +62,7 @@ public class QueryService {
                         new PendingJobs(
                                 payloadRequest.getId(),
                                 db.get().getUser(),
-                                PendingJobs.JobStatus.STARTED)
+                                JobStatus.STARTED)
                 );
             }
         } else {

@@ -30,7 +30,9 @@ class QueryServiceCallbackUrlFactoryTest {
         String result = factory.buildJobCallbackUrl(jobId);
 
         // Then
-        assertEquals("http://localhost:8080/query/jobs/550e8400-e29b-41d4-a716-446655440000/callback", result);
+        assertEquals(
+                "http://localhost:8080/api/query/jobs/550e8400-e29b-41d4-a716-446655440000/callback",
+                result);
     }
 
     @Test
@@ -45,7 +47,7 @@ class QueryServiceCallbackUrlFactoryTest {
         String result = factory.buildJobCallbackUrl(jobId);
 
         // Then
-        assertEquals("https://api.example.com/query/jobs/456/callback", result);
+        assertEquals("https://api.example.com/api/query/jobs/456/callback", result);
     }
 
     @Test
@@ -61,7 +63,7 @@ class QueryServiceCallbackUrlFactoryTest {
 
         // Then
         // UriComponentsBuilder should handle trailing slash properly
-        String expected = "http://localhost:8080/query/jobs/789/callback";
+        String expected = "http://localhost:8080/api/query/jobs/789/callback";
         assertEquals(expected, result);
     }
 
@@ -77,7 +79,7 @@ class QueryServiceCallbackUrlFactoryTest {
         String result = factory.buildJobCallbackUrl(jobId);
 
         // Then
-        assertEquals("http://localhost:8080/api/v1/query/jobs/999/callback", result);
+        assertEquals("http://localhost:8080/api/v1/api/query/jobs/999/callback", result);
     }
 
 

@@ -4,29 +4,22 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.http.Fault;
-import com.github.tomakehurst.wiremock.matching.StringValuePattern;
 import com.text2sql.text2sql_springboot.Config.MLServiceProps;
+import com.text2sql.text2sql_springboot.DTO.JobStatus;
 import com.text2sql.text2sql_springboot.DTO.MLPingResponse;
 import com.text2sql.text2sql_springboot.DTO.QueryRequest;
 import com.text2sql.text2sql_springboot.Entities.*;
 import com.text2sql.text2sql_springboot.Repositories.*;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.*;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.web.server.ResponseStatusException;
 
-
-import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.matching;
@@ -36,7 +29,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
-import static wiremock.org.hamcrest.Matchers.any;
 
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -206,7 +198,7 @@ class QueryServiceIntegrationTest {
         queryService.query(queryRequest);
         assertEquals(1, pendingJobsRepository.count());
         PendingJobs pendingJobs = pendingJobsRepository.findAll().get(0);
-        assertEquals(PendingJobs.JobStatus.STARTED, pendingJobs.getJobStatus());
+        assertEquals(JobStatus.STARTED, pendingJobs.getJobStatus());
         assertEquals(db.getUser().getId(), pendingJobs.getUserDetail().getId());
     }
 

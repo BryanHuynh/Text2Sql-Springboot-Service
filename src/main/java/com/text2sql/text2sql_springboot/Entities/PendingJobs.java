@@ -1,12 +1,12 @@
 package com.text2sql.text2sql_springboot.Entities;
 
+import com.text2sql.text2sql_springboot.DTO.JobStatus;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
-import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
@@ -20,10 +20,6 @@ public class PendingJobs {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_user"))
     private UserDetail userDetail;
-
-    public enum JobStatus {
-        STARTED, SUCCESS, FAILED
-    }
 
     @Enumerated(EnumType.STRING)
     @Column(name = "job_status", nullable = false)

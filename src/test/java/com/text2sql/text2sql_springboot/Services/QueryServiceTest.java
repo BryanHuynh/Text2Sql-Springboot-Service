@@ -172,7 +172,7 @@ class QueryServiceTest {
                                                                    .equals(testCorrelationId) &&
                                                                    pendingJob.getUserDetail()
                                                                            .equals(testUserDetail) &&
-                                                                   pendingJob.getJobStatus() == PendingJobs.JobStatus.STARTED
+                                                                   pendingJob.getJobStatus() == JobStatus.STARTED
         ));
         verify(pendingJobsRepository, times(1)).save(any(PendingJobs.class));
     }

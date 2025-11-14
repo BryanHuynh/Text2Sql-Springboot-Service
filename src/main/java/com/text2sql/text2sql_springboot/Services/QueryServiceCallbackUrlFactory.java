@@ -15,7 +15,7 @@ public class QueryServiceCallbackUrlFactory {
     public String buildJobCallbackUrl(String jobId) {
         return UriComponentsBuilder
                 .fromUriString(urlProps.getPublicBaseUrl())
-                .pathSegment("query", "jobs", "{id}", "callback")
+                .pathSegment("api", "query", "jobs", "{id}", "callback")
                 .buildAndExpand(jobId)
                 .toUriString();
     }
